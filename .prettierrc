@@ -1,0 +1,12 @@
+{
+    "printWidth": 100, // A smaller width for better readability
+    "tabWidth": 2,
+    "useTabs": false, // Ensures consistent use of spaces
+    "singleQuote": true,
+    "jsxSingleQuote": true, // If you're using JSX, this can be handy
+    "trailingComma": "es5", // es5 is often preferred for better diff and cleaner code
+    "semi": true,
+    "bracketSpacing": true, // Adds spaces between brackets in object literals
+    "arrowParens": "always", // It's often clearer to always include parens
+    "endOfLine": "lf" // Ensures consistent line endings
+}

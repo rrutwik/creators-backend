@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  proxy:
+    container_name: proxy
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    restart: "unless-stopped"
+
+  # server:
+  #   container_name: server
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     DB_HOST: localhost
+  #     DB_PORT: 27017
+  #     DB_DATABASE: dev
+  #     DB_USER: app_user
+  #     DB_PASSWORD: 212301031cdsf2
+  #   volumes:
+  #     - ./:/app
+  #     - /app/node_modules
+  #   restart: "unless-stopped"
+  #   networks:
+  #     - backend
+  #   links:
+  #     - mongo
+  #   depends_on:
+  #     - mongo
+
+  mongo:
+    container_name: mongo
+    image: mongo:7.0
+    restart: "unless-stopped"
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: app_user  # Use the standard MongoDB environment variables for initialization
+      MONGO_INITDB_ROOT_PASSWORD: 212301031cdsf2
+      MONGO_INITDB_DATABASE: techkarmic
+    volumes:
+      - ./mongo_data:/data/db
+
