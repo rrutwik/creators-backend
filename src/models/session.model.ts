@@ -12,21 +12,12 @@ const SessionSchema: Schema = new Schema({
         required: true,
         unique: true,
     },
-    expiry_time: {
+    refresh_token: {
         type: String,
         required: true,
         unique: true,
-    },
-    refresh_token: {
-        type: Date,
-        required: true,
-        unique: true,
-    },
-    refresh_token_expiry_time: {
-        type: Date,
-        required: true,
-        unique: true,
-    },
+    }
 });
 
 export const SessionModel = model<Session & Document>('session', SessionSchema);
+SessionModel.syncIndexes();

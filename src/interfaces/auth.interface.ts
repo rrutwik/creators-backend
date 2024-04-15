@@ -13,3 +13,27 @@ export interface TokenData {
 export interface RequestWithUser extends Request {
   user: User;
 }
+
+export interface HandleMessageRequest extends RequestWithUser {
+  body: {
+      message: string,
+      file_id?: string,
+      session_id: string
+  }
+}
+
+export interface RefreshTokenRequest extends Request {
+  body: {
+    refreshToken: string;
+  }
+}
+
+export interface GoogleLoginBody {
+  client_id: string;
+  credential: string;
+  select_by: string;
+}
+
+export interface GoogleLoginRequest extends Request {
+  body: GoogleLoginBody
+}

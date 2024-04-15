@@ -9,6 +9,10 @@ export class CreateUserDto {
   @MinLength(9)
   @MaxLength(32)
   public password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  public mobile: string;
 }
 
 export class UpdateUserDto {
@@ -17,4 +21,31 @@ export class UpdateUserDto {
   @MinLength(9)
   @MaxLength(32)
   public password: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  public email: string;
+
+  @IsString()
+  public mobile: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(9)
+  @MaxLength(32)
+  public password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  public token: string;
+}
+
+
+export class UserRefreshTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  public refresh_token: string;
 }
