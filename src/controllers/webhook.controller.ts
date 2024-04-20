@@ -6,7 +6,8 @@ export class WebHookController {
   public whatsapp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log(req.body, req.query, req.params, req.headers);
-      return res.status(200).json({ message: 'success' });
+      const challenge = req.query["hub.challenge"];
+      return res.status(200).send(challenge);
     } catch (error) {
       next(error);
     }
