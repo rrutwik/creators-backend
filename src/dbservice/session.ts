@@ -32,7 +32,7 @@ export class SessionDBService {
           logger.error(errorMessage);
           throw new DatabaseException(error);
       }
-  }
+    }
 
     public async deleteAllSessionForUserId(user_id: string): Promise<void> {
         try {

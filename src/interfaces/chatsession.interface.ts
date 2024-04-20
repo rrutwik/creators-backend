@@ -1,8 +1,10 @@
+import { ObjectId } from "mongoose";
 import { Message } from "./message.interface";
 
 export interface ChatSession {
   _id: string,
-  user_id: string,
+  user_id: string | ObjectId,
+  uuid?: string,
   user?: string,
   messages: Message[],
   is_active: boolean,

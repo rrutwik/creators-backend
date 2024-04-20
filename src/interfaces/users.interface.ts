@@ -46,9 +46,11 @@ export interface Payment {
   user_id: string;
   user?: User;
   amount: number;
-  razorpay_order_id: string;
-  props: PaymentProps;
+  razorpay_order_id?: string;
+  props?: PaymentProps;
   status: PaymentStatus;
   method: PaymentMethod;
   type: PaymentType;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

@@ -1,13 +1,10 @@
 import { Router } from 'express';
-import { AuthController } from '@controllers/auth.controller';
-import { CreateUserDto, UserRefreshTokenDto } from '@dtos/users.dto';
 import { Routes } from '@interfaces/routes.interface';
-import { AuthMiddleware } from '@middlewares/auth.middleware';
-import { ValidationMiddleware } from '@middlewares/validation.middleware';
 import { ChatController } from '@/controllers/chat.controller';
+import { AuthMiddleware } from '@/middlewares/auth.middleware';
 
 export class AuthRoute implements Routes {
-  public path = '/chat/';
+  public path = '/auth/';
   public router = Router();
   public chatController = new ChatController();
 

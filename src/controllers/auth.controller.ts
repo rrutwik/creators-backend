@@ -6,6 +6,7 @@ import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUs
 import { User } from '@interfaces/users.interface';
 import { getGoogleUserInfo, oauth2Client, scopes } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
+import { UserProfileModel } from '@/models/user_profile.model';
 
 export class AuthController {
   public authService = Container.get(AuthService);
@@ -60,7 +61,11 @@ export class AuthController {
   public me = async (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
       const userData: User = req.user;
-      return res.status(200).json({ data: userData, message: 'user_info' });
+      const userProfile = await UserProfileModel.findOne({ user_id: userData._id });
+      return res.status(200).json({ data: {
+        ...userData,
+        ...userProfile
+      }, message: 'user_info' });
     } catch (error) {
       next(error);
     }
@@ -75,7 +80,6 @@ export class AuthController {
       // Check if user exists
       let user = await this.userService.findUserByEmail(email);
       if (!user) {
-        // If user doesn't exist, create a new one
         user = await this.userService.createUserFromGoogle(googleUser);
       }
       const {sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);

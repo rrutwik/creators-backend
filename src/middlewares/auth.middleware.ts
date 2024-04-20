@@ -31,13 +31,13 @@ export const AuthMiddleware = async (req: RequestWithUser, res: Response, next: 
           req.user = findUser;
           next();
         } else {
-          next(new HttpException(404, 'Wrong authentication token'));
+          next(new HttpException(401, 'Wrong authentication token'));
         }
       } else {
         next(new HttpException(404, 'Wrong authentication token'));
       }
     } else {
-      next(new HttpException(404, 'Authentication token missing'));
+      next(new HttpException(401, 'Authentication token missing'));
     }
   } catch (error) {
     if (error instanceof TokenExpiredError) {

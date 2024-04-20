@@ -1,10 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
 
 import { AuthService } from '@services/auth.service';
 import { Container } from 'typedi';
-import { GoogleLoginBody, GoogleLoginRequest, HandleMessageRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
+import { HandleMessageRequest, RequestWithUser } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
-import { getGoogleUserInfo, oauth2Client, scopes } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
 import { ChatSessionService } from '@/services/chatsession.service';
 import { logger } from '@/utils/logger';
@@ -22,7 +21,7 @@ export class ChatController {
       let chatSession = null;
       if (sessionId) {
         chatSession = await this.chatSessionService.getSessionById(sessionId, user._id);
-      } else {  
+      } else {
         chatSession = await this.chatSessionService.createChatSession(user);
       }
       if (!chatSession) {

@@ -2,6 +2,7 @@ import { App } from '@/app';
 import { AuthRoute } from '@routes/auth.route';
 import { UserRoute } from '@routes/users.route';
 import { ValidateEnv } from './utils/validateEnv';
+import { WebHookRoute } from './routes/webhook.route';
 
 process.on('uncaughtException', (err) => {
   console.error('There was an uncaught error', err);
@@ -14,6 +15,16 @@ process.on('unhandledRejection', (reason, promise) => {
 
 ValidateEnv();
 
-const app = new App([new UserRoute(), new AuthRoute()]);
+const app = new App([new UserRoute(), new AuthRoute(), new WebHookRoute()]);
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received.');
+  // Perform cleanup tasks here
+  process.exit(0);
+});
 
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received.');
+  // Perform cleanup tasks here
+  process.exit(0);
+});
 app.listen();

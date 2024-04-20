@@ -9,7 +9,8 @@ const PaymentModelSchema = new Schema({
         index: true
     },
     type: {
-        type: PaymentType,
+        type: String,
+        enum: Object.values(PaymentType),
         required: true
     },
     amount: {
@@ -17,30 +18,28 @@ const PaymentModelSchema = new Schema({
         required: true
     },
     method: {
-        type: PaymentMethod,
+        type: String,
+        enum: Object.values(PaymentMethod),
         default: PaymentMethod.RAZORPAY,
         required: true,
     },
     razorpay_order_id: {
         type: String,
-        required: true,
-        index: true
+        index: true,
+        default: null
     },
     props: {
-        razorpay_create_object: {
-            type: Object,
-            required: true
-        },
-        razorpay_payment_status_object: {
-            type: Object,
-            required: true
-        }
+        type: Object,
+        required: true,
+        default: {}
     },
     status: {
-        type: PaymentStatus,
-        required: true,
-        default: PaymentStatus.CREATED
+        type: String,
+        enum: Object.values(PaymentStatus),
+        default: PaymentStatus.CREATED,
+        required: true
     },
 }, { timestamps: true });
 
 export const PaymentModel = model<Payment & Document>('payment', PaymentModelSchema);
+PaymentModel.syncIndexes();

@@ -1,15 +1,10 @@
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '@/config';
 import { GoogleLoginBody } from '@/interfaces/auth.interface';
-import express from 'express';
 import { google, Auth } from 'googleapis';
-// Replace these with your client ID and client secret obtained from the Google Developer Console
-const YOUR_CLIENT_ID = '590138639341-52k54qmlvdhbbr9vsfmm8q4hgu4maln5.apps.googleusercontent.com';
-const YOUR_CLIENT_SECRET = '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';
-const YOUR_REDIRECT_URL = 'http://localhost:3001/auth/google_call_back';
 
 export const oauth2Client = new google.auth.OAuth2(
-  YOUR_CLIENT_ID,
-  YOUR_CLIENT_SECRET,
-  YOUR_REDIRECT_URL
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
 );
 
 // Generate a url that asks permissions for the user's email and profile
