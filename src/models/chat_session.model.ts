@@ -7,17 +7,6 @@ export enum MessageRole {
     SYSTEM = 3
 }
 
-// const MessageSchema: Schema = new Schema({
-//     message: {
-//         type: String,
-//         required: true,
-//     },
-//     role: {
-//         type: MessageRole,
-//         required: true,
-//     }
-// }, { timestamps: true });
-
 const ChatSessionSchema: Schema = new Schema({
     name: {
       type: String,
