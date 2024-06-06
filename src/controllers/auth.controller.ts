@@ -62,10 +62,7 @@ export class AuthController {
     try {
       const userData: User = req.user;
       const userProfile = await UserProfileModel.findOne({ user_id: userData._id });
-      return res.status(200).json({ data: {
-        ...userData,
-        ...userProfile
-      }, message: 'user_info' });
+      return res.status(200).json({ data: userProfile, message: 'user_info' });
     } catch (error) {
       next(error);
     }

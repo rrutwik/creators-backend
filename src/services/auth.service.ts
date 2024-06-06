@@ -3,9 +3,10 @@ import { compare, hash } from 'bcrypt';
 
 import { HttpException } from '@exceptions/HttpException';
 import { Session } from '@/interfaces/session.interface';
-import { User } from '@interfaces/users.interface';
+import { User, UserProfile } from '@interfaces/users.interface';
 import { UserModel } from '@/models/user.model';
 import { SessionService } from './session.service';
+import { UserProfileModel } from '@/models/user_profile.model';
 
 @Service()
 export class AuthService {
@@ -17,7 +18,7 @@ export class AuthService {
 
     const hashedPassword = await hash(user.password, 10);
     const createUserData: User = await UserModel.create({ ...user, password: hashedPassword });
-
+    const userProfile: UserProfile = await UserProfileModel.create({ user_id: createUserData._id });
     return createUserData;
   }
 

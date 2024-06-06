@@ -4,18 +4,20 @@ import { getHashedPassoword } from '@/utils/encrypt';
 import { logger } from '@/utils/logger';
 
 const UserProfileSchema: Schema = new Schema({
-  user: {
+  user_id: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   first_name: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   last_name: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   credits: {
     type: Number,
