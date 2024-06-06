@@ -33,9 +33,8 @@ export class ChatSessionService {
             message,
             role: MessageRole.USER,
           };
-          const gitaAgent = new GitaAgent(dbSession);
-          await gitaAgent.initAgent();
-          gitaAgent.sendMessageToAgent(userMessage, dbSession);
+          const gitaAgent = new GitaAgent();
+          gitaAgent.sendMessageToAgent(userMessage.message, dbSession);
           return dbSession;
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;

@@ -120,14 +120,10 @@ export class UserController {
       if (!canMessage) {
         throw new Error('You cannot message');
       }
-      const gitaAgent = new GitaAgent(chatSession);
-      await gitaAgent.initAgent();
-      gitaAgent.sendMessageToAgent(message, chatSession);
+      const gitaAgent = new GitaAgent();
+      const updatedChatSession = await gitaAgent.sendMessageToAgent(message, chatSession);
       return res.status(200).json({
-        data: chatSession,
-      });
-      return res.status(200).json({
-        data: null,
+        data: updatedChatSession,
       });
     } catch (error) {
       next(error);

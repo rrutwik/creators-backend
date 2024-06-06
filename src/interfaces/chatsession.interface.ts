@@ -6,6 +6,7 @@ export interface ChatSession {
   user_id: string | ObjectId,
   uuid?: string,
   user?: string,
+  can_message: boolean,
   messages: Message[],
   is_active: boolean,
   created_at: Date,

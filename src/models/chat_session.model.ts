@@ -1,4 +1,4 @@
-import { model, Schema, Document } from 'mongoose';
+import { model, Schema, Document, Types } from 'mongoose';
 import { ChatSession } from '@/interfaces/chatsession.interface';
 
 export enum MessageRole {
@@ -6,6 +6,27 @@ export enum MessageRole {
     ASSISTANT = 2,
     SYSTEM = 3
 }
+
+const MessageSchema = new Schema({
+    _id: {
+        type: Schema.Types.ObjectId,
+        default: () => new Types.ObjectId()
+    },
+    type: {
+        type: String,
+        default: 'text',
+        required: true
+    },
+    text: {
+        type: String,
+        required: true
+    },
+    role: {
+        type: Number,
+        enum: Object.values(MessageRole),
+        required: true
+    }
+});
 
 const ChatSessionSchema: Schema = new Schema({
     name: {
@@ -27,10 +48,15 @@ const ChatSessionSchema: Schema = new Schema({
         },
         unique: true
     },
+    can_message: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     messages: {
-      type: Array,
-      required: true,
-      default: [],
+        type: [MessageSchema],
+        required: true,
+        default: []
     }
 }, { timestamps: true });
 

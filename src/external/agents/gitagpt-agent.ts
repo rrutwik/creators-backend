@@ -1,14 +1,9 @@
 import { ChatSession } from "@/interfaces/chatsession.interface";
 import { logger } from "@/utils/logger";
-import { Service } from "typedi";
 import { HumanMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
 import { ChatOpenAI } from "@langchain/openai";
-import type { ChatPromptTemplate } from "@langchain/core/prompts";
-import { pull } from "langchain/hub";
-import { AgentExecutor, createStructuredChatAgent } from "langchain/agents";
-import { Message } from "@/interfaces/message.interface";
-
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 
 export class GitaAgent {
   private chatHistory: BaseMessage[] = [];
@@ -27,65 +22,55 @@ export class GitaAgent {
       },
     }]
   });
-  private agentExecutor: AgentExecutor;
 
-  constructor(chatSession: ChatSession) {
+  private getMessages(chatSession: ChatSession) {
     const messages = chatSession.messages;
     messages.forEach((message) => {
       if (message.role === MessageRole.USER) {
-        this.chatHistory.push(new HumanMessage(message.message));
+        this.chatHistory.push(new HumanMessage(message.text));
       } else if (message.role === MessageRole.ASSISTANT) {
-        this.chatHistory.push(new AIMessage(message.message));
+        this.chatHistory.push(new AIMessage(message.text));
       } else if (message.role === MessageRole.SYSTEM) {
-        this.chatHistory.push(new SystemMessage(message.message));
+        this.chatHistory.push(new SystemMessage(message.text));
       } else {
         throw new Error("Invalid message role");
       }
     });
-    logger.info("GitaAgent constructor");
+    return this.chatHistory;
   }
 
-  public async initAgent() {
-    const prompt = await pull<ChatPromptTemplate>(
-      "hwchase17/structured-chat-agent"
-    );
-    const tools = [];
-    const agent = await createStructuredChatAgent({
-      llm: this.chatGPTModel,
-      prompt,
-      tools
-    });
-    this.agentExecutor = new AgentExecutor({
-      agent,
-      tools
-    });
-  }
-
-  public async sendMessageToAgent(message: Message, chatSession: ChatSession): Promise<ChatSession> {
-    await ChatSessionModel.findOneAndUpdate(
-      { _id: chatSession._id },
+  public async sendMessageToAgent(message: string, _chatSession: ChatSession): Promise<ChatSession> {
+    const prompt = ChatPromptTemplate.fromMessages([
+      new SystemMessage(`You are bhagwat gita expert. Chat with users as Shree Krishna. Always answer in terms/perspective of Bhagwat Gita/Hindu Culture. Talk in Language, which user is using.
+      If you don't have a answer, ask a question if you want to or just answer with "Sorry I am not able to answer" or any other sentence conveying you don't about it, in language user is talking.`),
+      new MessagesPlaceholder("messages")
+    ]);
+    const chain = prompt.pipe(this.chatGPTModel);
+    const chatSession = await ChatSessionModel.findOneAndUpdate(
+      { _id: _chatSession._id },
       {
+        can_message: false,
         $push: {
           messages: {
-            message: message.message,
+            text: message,
             role: MessageRole.USER
           }
         }
       },
       { new: true }
     );
-    const output = await this.agentExecutor.invoke({
-      input: message.message,
-      chat_history: this.chatHistory
-    });
+    const output = await chain.invoke({
+      messages: this.getMessages(chatSession)
+    })
     logger.info(`GitaAgent response: ${JSON.stringify(output, null, 4)}`);
-    const agentMessage = output.generations[0].text;
+    const agentMessage = output.content;
     return await ChatSessionModel.findOneAndUpdate(
-      { _id: chatSession._id },
+      { _id: _chatSession._id },
       {
+        can_message: true,
         $push: {
           messages: {
-            message: agentMessage,
+            text: agentMessage,
             role: MessageRole.ASSISTANT
           }
         }
