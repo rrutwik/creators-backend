@@ -7,6 +7,8 @@ import { User } from '@interfaces/users.interface';
 import { UserService } from '@/services/users.service';
 import { ChatSessionService } from '@/services/chatsession.service';
 import { logger } from '@/utils/logger';
+import { ChatSessionModel } from '@/models/chat_session.model';
+import { UserProfileModel } from '@/models/user_profile.model';
 
 export class ChatController {
   public authService = Container.get(AuthService);
@@ -16,20 +18,32 @@ export class ChatController {
   public handleMessageOfUser = async (req: HandleMessageRequest, res: Response, next: NextFunction) => {
     try {
       const user: User = req.user;
-      const sessionId = req.body.session_id;
+      const chatSessionUUID = req.body.chat_id;
       const message = req.body.message;
       let chatSession = null;
-      if (sessionId) {
-        chatSession = await this.chatSessionService.getSessionById(sessionId, user._id);
+      if (chatSessionUUID) {
+        chatSession = await this.chatSessionService.getSessionByUUID(chatSessionUUID, user._id);
       } else {
-        chatSession = await this.chatSessionService.createChatSession(user);
+        chatSession = await this.chatSessionService.createChatSession(user, message.slice(0, 8));
       }
       if (!chatSession) {
         logger.error(`error: chat session not found`);
         return res.status(404).json({ message: 'session not found' });
       }
-      await this.chatSessionService.addMessageToSession(chatSession, message, user._id);
-      return res.status(200).json({ message: `message added to session ${chatSession._id}` });
+      const userProfile = await UserProfileModel.findOne({
+        user_id: user._id
+      });
+      if (userProfile.credits == 0) {
+        return res.status(400).json({
+          message: "Recharge First"
+        });
+      }
+      await UserProfileModel.updateOne(
+        { user_id: user._id },
+        { $inc: { credits: -1 } }  // Decreases the credits by 1
+      );
+      const updatedChatSession = await this.chatSessionService.addMessageToSession(chatSession, message, user._id);
+      return res.status(200).json({ message: `message added to session ${updatedChatSession._id}`, data: updatedChatSession });
     } catch (error) {
       logger.error(`error: ${error} errorstack: ${error.stack} error message: ${error.message}`);
       next(error);
@@ -40,7 +54,7 @@ export class ChatController {
     try {
       const user: User = req.user;
       const sessionId = req.params.sessionId;
-      const chatSession = await this.chatSessionService.getSessionById(sessionId, user._id);
+      const chatSession = await this.chatSessionService.getSessionByUUID(sessionId, user._id);
       if (!chatSession) {
         logger.error(`error: chat session not found`);
         return res.status(404).json({ message: 'session not found' });
@@ -49,6 +63,59 @@ export class ChatController {
       return res.status(200).json({ messages, session_id: chatSession._id });
     } catch (error) {
       logger.error(`error: ${error} errorstack: ${error.stack} error message: ${error.message}`);
+      next(error);
+    }
+  }
+
+  public getChats = async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    try {
+      const user: User = req.user;
+      if (!user) {
+        throw new Error('User not found');
+      }
+      const limit = Number(req.query.limit) || 10;
+      const offset = Number(req.query.offset) || 0;
+
+      const chatSessions = await ChatSessionModel.find({
+        user_id: user._id,
+      }, {
+        name: 1,
+        uuid: 1,
+        updatedAt: 1
+      }, {
+        sort: {
+          updatedAt: -1
+        }
+      })
+      .skip(offset)
+      .limit(limit);
+
+      return res.status(200).json({
+        data: {
+          records: chatSessions,
+          limit: limit,
+          offset: offset
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public getChat = async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    try {
+      const user: User = req.user;
+      if (!user) {
+        throw new Error('User not found');
+      }
+      const chatSessionUUID = req.params.id;
+      const chatSession = await ChatSessionModel.findOne({
+        uuid: chatSessionUUID,
+      });
+      return res.status(200).json({
+        data: chatSession,
+      });
+    } catch (error) {
       next(error);
     }
   }

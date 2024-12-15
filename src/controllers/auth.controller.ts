@@ -61,7 +61,7 @@ export class AuthController {
   public me = async (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
       const userData: User = req.user;
-      const userProfile = await UserProfileModel.findOne({ user_id: userData._id });
+      const userProfile = (await UserProfileModel.findOne({ user_id: userData._id }));
       return res.status(200).json({ data: userProfile, message: 'user_info' });
     } catch (error) {
       next(error);

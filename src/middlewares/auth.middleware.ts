@@ -5,6 +5,7 @@ import { HttpException } from '@exceptions/HttpException';
 import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
 import { UserModel } from '@/models/user.model';
 import { SessionDBService } from '@/dbservice/session';
+import { logger } from '@/utils/logger';
 
 const getAuthorization = (req: RequestWithUser) => {
   const cookie = req.cookies['Authorization'];
@@ -40,6 +41,8 @@ export const AuthMiddleware = async (req: RequestWithUser, res: Response, next: 
       next(new HttpException(401, 'Authentication token missing'));
     }
   } catch (error) {
+    logger.info(`Error in auth middleware: ${error}`);
+    logger.error(error);
     if (error instanceof TokenExpiredError) {
       next(new HttpException(401, 'Token expired'));
     } else {

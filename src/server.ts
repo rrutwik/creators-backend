@@ -3,11 +3,13 @@ import { AuthRoute } from '@routes/auth.route';
 import { UserRoute } from '@routes/users.route';
 import { ValidateEnv } from './utils/validateEnv';
 import { WebHookRoute } from './routes/webhook.route';
+import { ChatRoute } from './routes/chat.route';
 
 process.on('uncaughtException', (err) => {
   console.error('There was an uncaught error', err);
   process.exit(1); //mandatory (as per the Node.js docs)
 });
+
 process.on('unhandledRejection', (reason, promise) => {
   console.log('Unhandled Rejection at:', promise, 'reason:', reason);
   // Application specific logging, throwing an error, or other logic here
@@ -15,7 +17,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 ValidateEnv();
 
-const app = new App([new UserRoute(), new AuthRoute(), new WebHookRoute()]);
+const app = new App([new UserRoute(), new ChatRoute(), new AuthRoute(), new WebHookRoute()]);
+
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received.');
   // Perform cleanup tasks here
@@ -27,4 +30,5 @@ process.on('SIGINT', () => {
   // Perform cleanup tasks here
   process.exit(0);
 });
+
 app.listen();

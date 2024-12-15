@@ -39,7 +39,7 @@ export class GitaAgent {
     return this.chatHistory;
   }
 
-  public async sendMessageToAgent(message: string, _chatSession: ChatSession): Promise<ChatSession> {
+  public async sendMessageToAgent(message: string, _chatSession: ChatSession, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
     const prompt = ChatPromptTemplate.fromMessages([
       new SystemMessage(`You are bhagwat gita expert. Chat with users as Shree Krishna. Always answer in terms/perspective of Bhagwat Gita/Hindu Culture. Talk in Language, which user is using.
       If you don't have a answer, ask a question if you want to or just answer with "Sorry I am not able to answer" or any other sentence conveying you don't about it, in language user is talking.`),
@@ -59,6 +59,7 @@ export class GitaAgent {
       },
       { new: true }
     );
+    userUpdatedChatSession(chatSession);
     const output = await chain.invoke({
       messages: this.getMessages(chatSession)
     })

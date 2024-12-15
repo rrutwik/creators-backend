@@ -100,7 +100,7 @@ dist
 
 # vuepress build output
 .vuepress/dist
-
+mongo_data/
 # vuepress v2.x temp and cache directory
 .temp
 .cache

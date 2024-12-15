@@ -18,7 +18,7 @@ export interface HandleMessageRequest extends RequestWithUser {
   body: {
       message: string,
       file_id?: string,
-      session_id: string
+      chat_id: string
   }
 }
 

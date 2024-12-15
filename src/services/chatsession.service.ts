@@ -9,33 +9,40 @@ import { Service } from "typedi";
 
 @Service()
 export class ChatSessionService {
-    public async createChatSession(user: User): Promise<ChatSession> {
-        const data = { user_id: user._id };
+    public async createChatSession(user: User, name: string = 'Chat Session'): Promise<ChatSession> {
+        const data = { user_id: user._id, name: name };
         const session = await ChatSessionModel.create(data);
         return session;
     }
 
-    public async getSessionById(_id: string, userId: string): Promise<ChatSession> {
-      return await ChatSessionModel.findOne({ _id: _id, user_id: userId });
+    public async getSessionByUUID(uuid: string, userId: string): Promise<ChatSession> {
+      return await ChatSessionModel.findOne({ uuid: uuid, user_id: userId });
     }
 
     public async addMessageToSession(session: ChatSession, message: string, userId: string): Promise<ChatSession> {
         try {
           const dbSession = await ChatSessionModel.findOne(
-            { user_id: userId, session_id: session._id },
+            { user_id: userId, uuid: session.uuid },
           );
+
           if (!dbSession) {
               logger.error(`Error while adding message to session: ${session._id}`);
               throw new DatabaseException(new Error("Session not found"));
           }
-          const newMessage = dbSession.messages[dbSession.messages.length - 1];
+
           const userMessage: Message = {
-            message,
+            text: message,
+            type: 'text',
             role: MessageRole.USER,
           };
+
           const gitaAgent = new GitaAgent();
-          gitaAgent.sendMessageToAgent(userMessage.message, dbSession);
-          return dbSession;
+          return await new Promise((resolve, reject) => {
+            const userUpdatedChatSession = (chatSession: ChatSession) => {
+              resolve(chatSession);
+            };
+            gitaAgent.sendMessageToAgent(userMessage.text, dbSession, userUpdatedChatSession);
+          });
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;
             logger.error(errorMessage);

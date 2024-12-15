@@ -4,6 +4,7 @@ import winston from 'winston';
 import winstonDaily from 'winston-daily-rotate-file';
 import { LOG_DIR } from '@config';
 import { Logger } from 'winston';
+import { Console } from 'winston/lib/winston/transports';
 
 // logs dir
 const logDir: string = join(__dirname, LOG_DIR);
@@ -47,7 +48,7 @@ const logger: Logger = winston.createLogger({
       handleExceptions: true,
       json: false,
       zippedArchive: true,
-    }),
+    })
   ],
 });
 
