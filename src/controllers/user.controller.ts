@@ -98,6 +98,7 @@ export class UserController {
       this.getRazorpayPayment(updatedPaymentModel, user);
       return res.status(201).json({ order_id: orderId, key_id: RAZORPAY_KEY });
     } catch (error) {
+      logger.error(`${error} ${error?.stack}`);
       next(error);
     }
   }
