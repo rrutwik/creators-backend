@@ -201,6 +201,7 @@ export class UserController {
       }
       const payment = await PaymentModel.findOne({
         razorpay_order_id: orderId,
+        user_id: user._id
       });
       if (!payment) {
         throw new Error('Payment not found');
@@ -210,6 +211,10 @@ export class UserController {
       }
       if (payment.status === PaymentStatus.PENDING) {
         this.getRazorpayPayment(payment, user);
+        const updatedPayment = await PaymentModel.findOne({
+          _id: payment._id
+        });
+        return res.status(200).json(updatedPayment);
       }
       return res.status(200).json(payment);
     } catch (error) {
