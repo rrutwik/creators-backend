@@ -204,9 +204,11 @@ export class UserController {
         razorpay_order_id: orderId,
         user_id: user._id
       });
+      logger.info(`User Id ${user._id}`);
       if (!payment) {
         throw new Error('Payment not found');
       }
+      logger.info(`User ${user._id} Payment ${payment.user_id}`);
       if (payment.user_id !== user._id) {
         throw new Error('Payment not found');
       }
