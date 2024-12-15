@@ -75,7 +75,6 @@ export class UserController {
       const razorPayOrder = await razorPayInstance.orders.create({
         amount: razorPayAmount,
         payment_capture: true,
-        customer_id: user._id.toString(),
         currency: 'INR',
       });
       if (!razorPayOrder) {
