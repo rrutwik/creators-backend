@@ -209,7 +209,7 @@ export class UserController {
         throw new Error('Payment not found');
       }
       logger.info(`User ${user._id} Payment ${payment.user_id}`);
-      if (payment.user_id !== user._id) {
+      if (payment.user_id.toString() !== user._id.toString()) {
         throw new Error('Payment not found');
       }
       if (payment.status === PaymentStatus.PENDING) {
