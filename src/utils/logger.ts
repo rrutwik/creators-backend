@@ -9,6 +9,10 @@ import { Console } from 'winston/lib/winston/transports';
 // logs dir
 const logDir: string = join(__dirname, LOG_DIR);
 
+console.log({
+  logDir
+});
+
 if (!existsSync(logDir)) {
   mkdirSync(logDir);
 }
