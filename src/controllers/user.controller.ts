@@ -194,7 +194,7 @@ export class UserController {
 
   public getRazorpayOrder = async (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
-      const orderId = req.params.orderId;
+      const orderId = req.query.order_id;
       const user: User = req.user;
       if (!user) {
         throw new Error('User not found');
