@@ -12,7 +12,7 @@ export class IndexRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router.post(`${this.path}`, (req, res) => res.status(200).json({
+    this.router.get(`${this.path}`, (req, res) => res.status(200).json({
       status: "Online"
     }));
   }
