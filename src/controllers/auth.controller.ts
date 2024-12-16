@@ -79,6 +79,14 @@ export class AuthController {
       if (!user) {
         user = await this.userService.createUserFromGoogle(googleUser);
       }
+      await UserProfileModel.updateOne({
+        user_id: user._id,
+      }, {
+        $set: {
+          first_name: googleUser.given_name,
+          last_name: googleUser.family_name
+        }
+      })
       const {sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);
       return res.status(200).json({ data: { user: loggedInUser, sessionToken, refreshToken }, message: 'login' });
     } catch (error) {

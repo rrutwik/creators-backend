@@ -30,9 +30,6 @@ export async function getGoogleUserInfo(body: GoogleLoginBody): Promise<Auth.Tok
         idToken: body.credential,
       })
       const userInfoResponse = ticket.getPayload();
-      console.log({
-          userInfoResponse
-      });
       return userInfoResponse;
     } catch (error) {
         console.error('Failed to fetch user info:', error);
