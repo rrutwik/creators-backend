@@ -92,7 +92,7 @@ export class UserController {
           capture: 'automatic',
           capture_options: {
             automatic_expiry_period: 100,
-            manual_expiry_period: 50,
+            manual_expiry_period: 150,
             refund_speed: 'normal'
           }
         }
