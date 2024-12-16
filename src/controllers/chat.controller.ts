@@ -35,6 +35,7 @@ export class ChatController {
       });
       if (userProfile.credits == 0) {
         return res.status(400).json({
+          status: "1000",
           message: "Recharge First"
         });
       }
