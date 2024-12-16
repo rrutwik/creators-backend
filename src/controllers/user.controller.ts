@@ -12,6 +12,7 @@ import { ChatSession } from '@/interfaces/chatsession.interface';
 import { RAZORPAY_KEY, RAZORPAY_SECRET } from '@/config';
 import moment from 'moment-timezone';
 import { logger } from '@/utils/logger';
+import axios from 'axios';
 
 var razorPayInstance = new Razorpay({
   key_id: RAZORPAY_KEY,
@@ -64,6 +65,12 @@ export class UserController {
       if (!razorPayAmount || isNaN(razorPayAmount)) {
         throw new Error('Invalid amount');
       }
+
+      if (razorPayAmount / 100 > 500) {
+        return res.status(403).json({
+          message: 'Only Less than 500 are allowed'
+        });
+      }
       const dbCreateOrder: Payment = {
         user_id: user._id,
         amount: amount,
@@ -72,10 +79,23 @@ export class UserController {
         status: PaymentStatus.CREATED,
       };
       const paymentModel = await PaymentModel.create(dbCreateOrder);
+      // const razorPayOrderResponse = await axios.post("https://api.razorpay.com/v1/orders", {
+      //   amount: razorPayAmount,
+      //   payment_capture: true,
+      //   currency: 'INR',
+      // });
       const razorPayOrder = await razorPayInstance.orders.create({
         amount: razorPayAmount,
         payment_capture: true,
         currency: 'INR',
+        payment: {
+          capture: 'automatic',
+          capture_options: {
+            automatic_expiry_period: 100,
+            manual_expiry_period: 50,
+            refund_speed: 'normal'
+          }
+        }
       });
       if (!razorPayOrder) {
         throw new Error('Order creation failed');
