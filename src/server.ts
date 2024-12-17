@@ -5,6 +5,7 @@ import { ValidateEnv } from './utils/validateEnv';
 import { WebHookRoute } from './routes/webhook.route';
 import { ChatRoute } from './routes/chat.route';
 import { IndexRoute } from './routes/index.route';
+import { ChatBotRoute } from './routes/chatbot.route';
 
 process.on('uncaughtException', (err) => {
   console.error('There was an uncaught error', err);
@@ -18,7 +19,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 ValidateEnv();
 
-const app = new App([new IndexRoute(), new UserRoute(), new ChatRoute(), new AuthRoute(), new WebHookRoute()]);
+const app = new App([new IndexRoute(), new ChatBotRoute(), new UserRoute(), new ChatRoute(), new AuthRoute(), new WebHookRoute()]);
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received.');

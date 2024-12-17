@@ -37,7 +37,14 @@ const ChatSessionSchema: Schema = new Schema({
     user_id: {
         type: Schema.Types.ObjectId,
         required: true,
-        index: true
+        index: true,
+        ref: 'user' // Reference to the Chatbot collectio
+    },
+    chatbot_id: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        index: true,
+        ref: 'chatbot'
     },
     uuid: {
         type: String,

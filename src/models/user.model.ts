@@ -38,5 +38,5 @@ const UserSchema: Schema = new Schema({
   },
 });
 
-export const UserModel = model<User & Document>('User', UserSchema);
+export const UserModel = model<User & Document>('user', UserSchema);
 UserModel.syncIndexes();

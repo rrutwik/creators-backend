@@ -19,6 +19,7 @@ export interface HandleMessageRequest extends RequestWithUser {
       message: string,
       file_id?: string,
       chat_id: string
+      chatbot_id: string
   }
 }
 

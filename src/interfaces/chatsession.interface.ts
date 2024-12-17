@@ -2,13 +2,17 @@ import { ObjectId } from "mongoose";
 import { Message } from "./message.interface";
 
 export interface ChatSession {
-  _id: string,
-  user_id: string | ObjectId,
+  _id?: string,
+  user_id: string | ObjectId | {
+    prompt: string
+  },
+  name: string,
+  chatbot_id?: {
+    prompt: string
+  } | string | ObjectId,
   uuid?: string,
-  user?: string,
-  can_message: boolean,
-  messages: Message[],
-  is_active: boolean,
-  created_at: Date,
-  updated_at: Date
+  can_message?: boolean,
+  messages?: Message[],
+  created_at?: Date,
+  updated_at?: Date
 };

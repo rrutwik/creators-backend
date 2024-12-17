@@ -11,9 +11,7 @@ export class AuthRoute implements Routes {
   public auth = new AuthController();
 
   constructor() {
-    console.log("creating auth route");
     this.initializeRoutes();
-    console.log("created auth route");
   }
 
   private initializeRoutes() {

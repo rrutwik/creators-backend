@@ -19,12 +19,13 @@ export class ChatController {
     try {
       const user: User = req.user;
       const chatSessionUUID = req.body.chat_id;
+      const chatBotId = req.body.chatbot_id;
       const message = req.body.message;
       let chatSession = null;
       if (chatSessionUUID) {
         chatSession = await this.chatSessionService.getSessionByUUID(chatSessionUUID, user._id);
       } else {
-        chatSession = await this.chatSessionService.createChatSession(user, message.slice(0, 8));
+        chatSession = await this.chatSessionService.createChatSession(user, message.slice(0, 8), chatBotId);
       }
       if (!chatSession) {
         logger.error(`error: chat session not found`);
@@ -82,15 +83,24 @@ export class ChatController {
       }, {
         name: 1,
         uuid: 1,
-        updatedAt: 1
+        updatedAt: 1,
+        chatbot_id: 1
       }, {
         sort: {
           updatedAt: -1
         }
       })
+      .populate({
+        path: 'chatbot_id',
+        select: {
+          name: 1
+        }
+      })
       .skip(offset)
       .limit(limit);
-
+      console.log({
+        chatSessions
+      })
       return res.status(200).json({
         data: {
           records: chatSessions,
@@ -112,6 +122,9 @@ export class ChatController {
       const chatSessionUUID = req.params.id;
       const chatSession = await ChatSessionModel.findOne({
         uuid: chatSessionUUID,
+      }).populate({
+        path: 'chatbot_id',
+        select: 'name', // Specifies that only the 'name' field should be populated
       });
       return res.status(200).json({
         data: chatSession,
