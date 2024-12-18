@@ -78,34 +78,37 @@ export class ChatController {
       const limit = Number(req.query.limit) || 10;
       const offset = Number(req.query.offset) || 0;
 
-      const chatSessions = await ChatSessionModel.find({
-        user_id: user._id,
-      }, {
-        name: 1,
-        uuid: 1,
-        updatedAt: 1,
-        chatbot_id: 1
-      }, {
-        sort: {
-          updatedAt: -1
-        }
-      })
-      .populate({
-        path: 'chatbot_id',
-        select: {
-          name: 1
-        }
-      })
-      .skip(offset)
-      .limit(limit);
-      console.log({
-        chatSessions
-      })
+      const [chatSessions, total] = await Promise.all([
+        ChatSessionModel.find({
+          user_id: user._id,
+        }, {
+          name: 1,
+          uuid: 1,
+          updatedAt: 1,
+          chatbot_id: 1
+        }, {
+          sort: {
+            updatedAt: -1
+          }
+        })
+        .populate({
+          path: 'chatbot_id',
+          select: {
+            name: 1
+          }
+        })
+        .skip(offset)
+        .limit(limit),
+        ChatSessionModel.countDocuments({
+          user_id: user._id,
+        })
+      ]);
       return res.status(200).json({
         data: {
           records: chatSessions,
           limit: limit,
-          offset: offset
+          offset: offset,
+          total: total
         }
       });
     } catch (error) {
