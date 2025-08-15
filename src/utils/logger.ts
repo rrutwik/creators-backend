@@ -7,7 +7,7 @@ import { Logger } from 'winston';
 import { Console } from 'winston/lib/winston/transports';
 
 // logs dir
-const logDir: string = join(__dirname, LOG_DIR);
+const logDir: string = LOG_DIR;
 
 console.log({
   logDir
