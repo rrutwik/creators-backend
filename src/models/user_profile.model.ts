@@ -22,7 +22,7 @@ const UserProfileSchema: Schema = new Schema({
   credits: {
     type: Number,
     required: true,
-    default: 10
+    default: 500
   }
 }, { timestamps: true
 });

@@ -29,7 +29,8 @@ export class Agent {
 
   private getMessages(chatSession: ChatSession) {
     const messages = chatSession.messages;
-    messages.forEach((message) => {
+  const lastFiveMessages = messages.slice(-5); // gets last 5 elements
+    lastFiveMessages.forEach((message) => {
       if (message.role === MessageRole.USER) {
         this.chatHistory.push(new HumanMessage(message.text));
       } else if (message.role === MessageRole.ASSISTANT) {
@@ -44,12 +45,6 @@ export class Agent {
   }
 
   public async sendMessageToAgent(message: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
-    const prompt = ChatPromptTemplate.fromMessages([
-      new SystemMessage(promptString),
-      new MessagesPlaceholder("messages")
-  ]);
-
-    const chain = prompt.pipe(this.chatGPTModel);
     const chatSession = await ChatSessionModel.findOneAndUpdate(
       { _id: _chatSession._id },
       {
@@ -64,9 +59,15 @@ export class Agent {
       { new: true }
     );
     userUpdatedChatSession(chatSession);
-    const formattedPrompt = await prompt.format({ messages: this.getMessages(chatSession) });
+    const pastMessages = this.getMessages(_chatSession);
+    const prompt = ChatPromptTemplate.fromMessages([
+          new SystemMessage(promptString),
+          new MessagesPlaceholder("history"),
+          new HumanMessage(message)
+    ]);
+    const formattedPrompt = await prompt.format({ history: pastMessages });
     const output = await this.chatGPTModel.invoke(formattedPrompt)
-    logger.info(`GitaAgent response: ${JSON.stringify(output, null, 4)}`);
+    logger.info(`Agent response: ${JSON.stringify(output, null, 4)}`);
     const agentMessage = output.content;
     return await ChatSessionModel.findOneAndUpdate(
       { _id: _chatSession._id },

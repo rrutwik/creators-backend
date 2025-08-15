@@ -1,5 +1,5 @@
 import { DatabaseException } from "@/exceptions/DependencyException";
-import { Agent } from "@/external/agents/gitagpt-agent";
+import { Agent } from "@/external/agents/agent";
 import { ChatBot } from "@/interfaces/chatbot.interface";
 import { ChatSession } from "@/interfaces/chatsession.interface";
 import { Message } from "@/interfaces/message.interface";
@@ -37,13 +37,13 @@ export class ChatSessionService {
             role: MessageRole.USER,
           };
 
-          const gitaAgent = new Agent();
+          const agent = new Agent();
           return await new Promise((resolve, reject) => {
             const userUpdatedChatSession = (chatSession: ChatSession) => {
               resolve(chatSession);
             }
             console.log((dbSession.chatbot_id as ChatBot)?.prompt);
-            gitaAgent.sendMessageToAgent(userMessage.text, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
+            agent.sendMessageToAgent(userMessage.text, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
           });
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;

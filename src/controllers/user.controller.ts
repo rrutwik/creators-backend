@@ -1,18 +1,14 @@
 import { NextFunction, Response } from 'express';
-import { Container } from 'typedi';
 import { Payment, PaymentMethod, PaymentStatus, PaymentType, User } from '@interfaces/users.interface';
-import { UserService } from '@services/users.service';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { PaymentModel } from '@/models/payments.model';
 import Razorpay from 'razorpay';
 import { UserProfileModel } from '@/models/user_profile.model';
 import { ChatSessionModel } from '@/models/chat_session.model';
-import { Agent } from '@/external/agents/gitagpt-agent';
 import { ChatSession } from '@/interfaces/chatsession.interface';
 import { RAZORPAY_KEY, RAZORPAY_SECRET } from '@/config';
 import moment from 'moment-timezone';
 import { logger } from '@/utils/logger';
-import axios from 'axios';
 
 var razorPayInstance = new Razorpay({
   key_id: RAZORPAY_KEY,
