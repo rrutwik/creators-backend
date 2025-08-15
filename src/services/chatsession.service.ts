@@ -47,7 +47,7 @@ export class ChatSessionService {
           });
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;
-            logger.error(errorMessage);
+            logger.error(`${errorMessage} ${error} ${error.stack}`);
             throw new DatabaseException(error);
         }
     }
