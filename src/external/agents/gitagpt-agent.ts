@@ -4,21 +4,25 @@ import { HumanMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/
 import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { OPENAI_KEY, OPENAI_MODEL_NAME } from "@/config";
 
-export class GitaAgent {
+const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
+
+export class Agent {
   private chatHistory: BaseMessage[] = [];
   private chatGPTModel = new ChatOpenAI({
-    modelName: "gpt-3.5-turbo-1106",
+    modelName: modelName,
+    apiKey: OPENAI_KEY,
     temperature: 0,
     callbacks: [{
       handleLLMEnd(output, runId, parentRunId, tags) {
-        logger.debug(`GPT-3.5 Turbo response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
+        logger.debug(`${modelName} response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
       },
       handleLLMError(error, runId, parentRunId, tags) {
-        logger.error(`GPT-3.5 Turbo error: ${error} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
+        logger.error(`${modelName} error: ${error} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
       },
       handleLLMStart(llm, prompts, runId, parentRunId, extraParams, tags, metadata, name) {
-        logger.debug(`GPT-3.5 Turbo start: ${llm} with prompts: ${prompts} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
+        logger.debug(`${modelName} start: ${llm} with prompts: ${prompts} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
       },
     }]
   });
@@ -60,9 +64,8 @@ export class GitaAgent {
       { new: true }
     );
     userUpdatedChatSession(chatSession);
-    const output = await chain.invoke({
-      messages: this.getMessages(chatSession)
-    })
+    const formattedPrompt = await prompt.format({ messages: this.getMessages(chatSession) });
+    const output = await this.chatGPTModel.invoke(formattedPrompt)
     logger.info(`GitaAgent response: ${JSON.stringify(output, null, 4)}`);
     const agentMessage = output.content;
     return await ChatSessionModel.findOneAndUpdate(

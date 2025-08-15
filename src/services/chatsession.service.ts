@@ -1,5 +1,5 @@
 import { DatabaseException } from "@/exceptions/DependencyException";
-import { GitaAgent } from "@/external/agents/gitagpt-agent";
+import { Agent } from "@/external/agents/gitagpt-agent";
 import { ChatBot } from "@/interfaces/chatbot.interface";
 import { ChatSession } from "@/interfaces/chatsession.interface";
 import { Message } from "@/interfaces/message.interface";
@@ -37,7 +37,7 @@ export class ChatSessionService {
             role: MessageRole.USER,
           };
 
-          const gitaAgent = new GitaAgent();
+          const gitaAgent = new Agent();
           return await new Promise((resolve, reject) => {
             const userUpdatedChatSession = (chatSession: ChatSession) => {
               resolve(chatSession);

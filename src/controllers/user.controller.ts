@@ -7,7 +7,7 @@ import { PaymentModel } from '@/models/payments.model';
 import Razorpay from 'razorpay';
 import { UserProfileModel } from '@/models/user_profile.model';
 import { ChatSessionModel } from '@/models/chat_session.model';
-import { GitaAgent } from '@/external/agents/gitagpt-agent';
+import { Agent } from '@/external/agents/gitagpt-agent';
 import { ChatSession } from '@/interfaces/chatsession.interface';
 import { RAZORPAY_KEY, RAZORPAY_SECRET } from '@/config';
 import moment from 'moment-timezone';
