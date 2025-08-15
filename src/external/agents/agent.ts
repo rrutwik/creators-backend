@@ -3,7 +3,7 @@ import { logger } from "@/utils/logger";
 import { HumanMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
 import { OPENAI_KEY, OPENAI_MODEL_NAME } from "@/config";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
@@ -29,19 +29,20 @@ export class Agent {
 
   private getMessages(chatSession: ChatSession) {
     const messages = chatSession.messages;
-  const lastFiveMessages = messages.slice(-5); // gets last 5 elements
+    const history: BaseMessage[] = [];
+  const lastFiveMessages = messages.slice(-5);
     lastFiveMessages.forEach((message) => {
       if (message.role === MessageRole.USER) {
-        this.chatHistory.push(new HumanMessage(message.text));
+        history.push(new HumanMessage(message.text));
       } else if (message.role === MessageRole.ASSISTANT) {
-        this.chatHistory.push(new AIMessage(message.text));
+        history.push(new AIMessage(message.text));
       } else if (message.role === MessageRole.SYSTEM) {
-        this.chatHistory.push(new SystemMessage(message.text));
+        history.push(new SystemMessage(message.text));
       } else {
         throw new Error("Invalid message role");
       }
     });
-    return this.chatHistory;
+    return history;
   }
 
   public async sendMessageToAgent(message: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
@@ -61,11 +62,12 @@ export class Agent {
     userUpdatedChatSession(chatSession);
     const pastMessages = this.getMessages(_chatSession);
     const prompt = ChatPromptTemplate.fromMessages([
-          new SystemMessage(promptString),
+          SystemMessagePromptTemplate.fromTemplate(promptString),
           new MessagesPlaceholder("history"),
-          new HumanMessage(message)
+          HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
     ]);
-    const formattedPrompt = await prompt.format({ history: pastMessages });
+    const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
+    logger.info(`Prompt: ${formattedPrompt}`);
     const output = await this.chatGPTModel.invoke(formattedPrompt)
     logger.info(`Agent response: ${JSON.stringify(output, null, 4)}`);
     const agentMessage = output.content;
