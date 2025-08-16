@@ -5,7 +5,7 @@ export const dbConnection = async () => {
   set('strictQuery', true);
 
   // Determine the connection URL based on the environment
-  const url: string = NODE_ENV === 'production' ? DB_URL : `mongodb://${DB_HOST}:${DB_PORT}`;
+  const url: string = DB_URL;
 
   // Set options based on the environment
   const options: ConnectOptions = NODE_ENV === 'production' ? {

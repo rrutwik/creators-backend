@@ -19,7 +19,12 @@ export class ChatBotController {
     try {
       const chatBots = await ChatBotModel.find({}, {
         _id: 1,
-        name: 1
+        id: 1,
+        name: 1,
+        description: 1,
+        religion: 1,
+        avatar: 1,
+        greeting: 1,
       });
       return res.status(200).json({ records: chatBots, total: chatBots.length, message: 'ChatBots retrieved' });
     } catch (error) {

@@ -6,6 +6,26 @@ const ChatBotSchema: Schema = new Schema({
       type: String,
       required: true
     },
+    id: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true
+    },
+    religion: {
+      type: String,
+      required: true
+    },
+    avatar: {
+      type: String,
+      required: true
+    },
+    greeting: {
+      type: String,
+      required: true
+    },
     prompt: {
       type: String,
       required: true

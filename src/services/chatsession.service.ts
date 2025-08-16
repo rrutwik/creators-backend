@@ -54,7 +54,11 @@ export class ChatSessionService {
 
     public async getMessagesForSession(session: ChatSession): Promise<Message[]> {
         try {
-            return session.messages;
+            return session.messages.map((message) => ({
+              ...message,
+              createdAt: message.createdAt || new Date(),
+              updatedAt: message.updatedAt || new Date(),
+            }));
         } catch (error) {
             const errorMessage = `Error while getting messages for session: ${session._id}`;
             logger.error(errorMessage);

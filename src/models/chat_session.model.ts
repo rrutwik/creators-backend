@@ -25,6 +25,14 @@ const MessageSchema = new Schema({
         type: Number,
         enum: Object.values(MessageRole),
         required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 });
 
