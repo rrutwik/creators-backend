@@ -23,6 +23,11 @@ const UserProfileSchema: Schema = new Schema({
     type: Number,
     required: true,
     default: 500
+  },
+  avatar: {
+    type: Buffer,
+    default: null,
+    required: false
   }
 }, { timestamps: true
 });

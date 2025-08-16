@@ -62,7 +62,10 @@ export class AuthController {
     try {
       const userData: User = req.user;
       const userProfile = (await UserProfileModel.findOne({ user_id: userData._id }));
-      return res.status(200).json({ data: userProfile, message: 'user_info' });
+      return res.status(200).json({ data: {
+        ...userProfile.toJSON(),
+        email: userData.email
+      }, message: 'user_info' });
     } catch (error) {
       next(error);
     }
@@ -73,18 +76,20 @@ export class AuthController {
       const body: GoogleLoginBody = req.body;
       const googleUser = await getGoogleUserInfo(body);
       const email = googleUser.email;
-
+      const picture = googleUser.picture;
       // Check if user exists
       let user = await this.userService.findUserByEmail(email);
       if (!user) {
         user = await this.userService.createUserFromGoogle(googleUser);
       }
+      const avatar = await this.userService.fetchAvatarFromURL(picture);
       await UserProfileModel.updateOne({
         user_id: user._id,
       }, {
         $set: {
           first_name: googleUser.given_name,
-          last_name: googleUser.family_name
+          last_name: googleUser.family_name,
+          avatar: avatar
         }
       })
       const {sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);

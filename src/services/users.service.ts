@@ -1,9 +1,11 @@
 import Container, { Service } from 'typedi';
-import { User } from '@interfaces/users.interface';
+import { User, UserProfile } from '@interfaces/users.interface';
 import { UserModel } from '@/models/user.model';
+import { UserProfileModel } from '@/models/user_profile.model';
 import { AuthService } from './auth.service';
 import { randomUUID } from 'crypto';
 import { Auth } from 'googleapis';
+import axios from 'axios';
 
 @Service()
 export class UserService {
@@ -17,5 +19,13 @@ export class UserService {
     const { email } = googleUser;
     const user = await this.authService.signup({ email, password: randomUUID() });
     return user;
+  }
+
+  public async fetchAvatarFromURL(url: string): Promise<Buffer> {
+    if (!url) {
+      return null;
+    }
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    return Buffer.from(response.data);
   }
 }
