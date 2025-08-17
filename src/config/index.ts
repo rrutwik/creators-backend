@@ -4,7 +4,7 @@ console.log({
     NODE_ENV: process.env.NODE_ENV
 });
 export const CREDENTIALS = process.env.CREDENTIALS === 'true';
-export const { NODE_ENV, PORT, SECRET_KEY, LOG_FORMAT, LOG_DIR, ORIGIN } = process.env;
+export const { NODE_ENV, PORT, SECRET_KEY, LOG_FORMAT, LOG_DIR, ORIGINS } = process.env;
 export const { DB_HOST, DB_URL, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD } = process.env;
 export const {RAZORPAY_KEY, RAZORPAY_SECRET} = process.env;
 export const {GOOGLE_CLIENT_SECRET, GOOGLE_CLIENT_ID, OPENAI_KEY, OPENAI_MODEL_NAME } = process.env;

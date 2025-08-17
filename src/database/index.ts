@@ -1,17 +1,18 @@
-import { ConnectOptions, connect, set } from 'mongoose';
+import mongoose, { ConnectOptions, Connection, Document, Schema, connect, set } from 'mongoose';
 import { NODE_ENV, DB_URL, DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD } from '@config';
 
 export const dbConnection = async () => {
   set('strictQuery', true);
 
-  // Determine the connection URL based on the environment
   const url: string = DB_URL;
 
   // Set options based on the environment
   const options: ConnectOptions = NODE_ENV === 'production' ? {
     dbName: DB_NAME,
     retryWrites: true,
-    w: 'majority', // Recommended for Atlas to ensure write acknowledgment
+    w: 'majority',
+    autoCreate: true,
+    autoIndex: true,
   } : {
     dbName: DB_NAME,
     user: DB_USERNAME,
@@ -28,4 +29,15 @@ export const dbConnection = async () => {
   }
 
   await connect(url, options);
+};
+
+export const getDb = (dbName: string): Connection => {
+  return mongoose.connection.useDb(dbName, { useCache: true });
+};
+
+export const getSecondDatabase = (collectionName: string, schema: Schema) => {
+  const dbName: string = 'data';
+  const conn: Connection = getDb(dbName);
+  // first arg: model name; third arg: collection name
+  return conn.model<Document>(collectionName, schema, collectionName);
 };
