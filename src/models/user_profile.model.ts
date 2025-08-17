@@ -22,7 +22,7 @@ const UserProfileSchema: Schema = new Schema({
   credits: {
     type: Number,
     required: true,
-    default: 500
+    default: 10
   },
   avatar: {
     type: Buffer,
