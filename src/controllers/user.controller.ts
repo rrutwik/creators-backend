@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { Payment, PaymentMethod, PaymentStatus, PaymentType, User } from '@interfaces/users.interface';
-import { RequestWithUser } from '@/interfaces/auth.interface';
+import { RequestWithUser, UpdateProfileRequest } from '@/interfaces/auth.interface';
 import { PaymentModel } from '@/models/payments.model';
 import Razorpay from 'razorpay';
 import { UserProfileModel } from '@/models/user_profile.model';
@@ -25,6 +25,26 @@ export class UserController {
         throw new Error('User not found');
       }
       const profile = await UserProfileModel.findOne({ user_id: user._id });
+      return res.status(200).json({ data: profile });
+    } catch (error) {
+      next(error);
+    }
+  }
+  private allowedLanguages = ['en', 'hi', 'mr', 'ta', 'kn', 'ml', 'gu', 'or', 'bn', 'pa'];
+  public updateProfile = async (req: UpdateProfileRequest, res: Response, next: NextFunction) => {
+    try {
+      const user: User = req.user;
+      const { language } = req.body;
+      if (!user) {
+        throw new Error('User not found');
+      }
+      if (!language) {
+        throw new Error('Language not found');
+      }
+      if (!this.allowedLanguages.includes(language)) {
+        throw new Error('Language not allowed');
+      }
+      const profile = await UserProfileModel.findOneAndUpdate({ user_id: user._id }, { language }, { new: true });
       return res.status(200).json({ data: profile });
     } catch (error) {
       next(error);

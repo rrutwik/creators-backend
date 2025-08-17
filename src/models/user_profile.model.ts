@@ -7,7 +7,8 @@ const UserProfileSchema: Schema = new Schema({
   user_id: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   first_name: {
     type: String,
@@ -28,6 +29,11 @@ const UserProfileSchema: Schema = new Schema({
     type: Buffer,
     default: null,
     required: false
+  },
+  language: {
+    type: String,
+    required: false,
+    default: 'en'
   }
 }, { timestamps: true
 });

@@ -15,6 +15,7 @@ export class UserRoute implements Routes {
   private initializeRoutes() {
     this.router.post(`${this.path}create_razorpay_order`, AuthMiddleware, this.user.createRazorpayOrder);
     this.router.get(`${this.path}get_razorpay_order`, AuthMiddleware, this.user.getRazorpayOrder);
-    this.router.post(`${this.path}profile`, AuthMiddleware, this.user.getProfile);
+    this.router.get(`${this.path}profile`, AuthMiddleware, this.user.getProfile);
+    this.router.put(`${this.path}profile`, AuthMiddleware, this.user.updateProfile);
   }
 }

@@ -10,6 +10,12 @@ export interface TokenData {
   expiresIn: number;
 }
 
+export interface UpdateProfileRequest extends RequestWithUser {
+  body: {
+    language?: string;
+  }
+}
+
 export interface RequestWithUser extends Request {
   user: User;
 }
