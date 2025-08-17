@@ -45,7 +45,7 @@ export class Agent {
     return history;
   }
 
-  public async sendMessageToAgent(message: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
+  public async sendMessageToAgent(message: string, userLanguage: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
     const chatSession = await ChatSessionModel.findOneAndUpdate(
       { _id: _chatSession._id },
       {
@@ -63,6 +63,7 @@ export class Agent {
     const pastMessages = this.getMessages(_chatSession);
     const prompt = ChatPromptTemplate.fromMessages([
           SystemMessagePromptTemplate.fromTemplate(promptString),
+          SystemMessagePromptTemplate.fromTemplate(`User language is ${userLanguage} so try to answe in that language`),
           new MessagesPlaceholder("history"),
           HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
     ]);

@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { ChatBotModel } from '@/models/chat_bot.model';
 import { ChatBot } from '@/interfaces/chatbot.interface';
+import { RequestWithUser } from '@/interfaces/auth.interface';
+import { UserProfileModel } from '@/models/user_profile.model';
+import { UserProfile } from '@/interfaces/users.interface';
+import { greetingPerReligionPerLanguage } from '@/data/greeting';
 
 export class ChatBotController {
   // Create a new ChatBot
@@ -15,9 +19,10 @@ export class ChatBotController {
   };
 
   // Get all ChatBots
-  public getChatBots = async (_req: Request, res: Response, next: NextFunction) => {
+  public getChatBots = async (_req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
-      const chatBots = await ChatBotModel.find({}, {
+      const user = _req.user;
+      let [chatBots, userProfile]: [ChatBot[], UserProfile] = await Promise.all([ChatBotModel.find({}, {
         _id: 1,
         id: 1,
         name: 1,
@@ -25,6 +30,13 @@ export class ChatBotController {
         religion: 1,
         avatar: 1,
         greeting: 1,
+      }), UserProfileModel.findOne({
+        user_id: user._id
+      })]);
+      const language = userProfile.language || 'en';
+      chatBots = chatBots.map((chatBot) => {
+        chatBot.greeting = greetingPerReligionPerLanguage[language]?.[chatBot.religion] || chatBot.greeting;
+        return chatBot;
       });
       return res.status(200).json({ records: chatBots, total: chatBots.length, message: 'ChatBots retrieved' });
     } catch (error) {

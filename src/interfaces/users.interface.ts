@@ -16,6 +16,7 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   credits: number;
+  language: string;
   avatar?: Buffer;
 }
 

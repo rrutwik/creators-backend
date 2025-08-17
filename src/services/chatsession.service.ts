@@ -5,6 +5,7 @@ import { ChatSession } from "@/interfaces/chatsession.interface";
 import { Message } from "@/interfaces/message.interface";
 import { User } from "@/interfaces/users.interface";
 import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
+import { UserProfileModel } from "@/models/user_profile.model";
 import { logger } from "@/utils/logger";
 import { Service } from "typedi";
 
@@ -22,15 +23,20 @@ export class ChatSessionService {
 
     public async addMessageToSession(session: ChatSession, message: string, userId: string): Promise<ChatSession> {
         try {
-          const dbSession = await ChatSessionModel.findOne(
-            { user_id: userId, uuid: session.uuid },
-          ).populate('chatbot_id');
+          const [dbSession, userProfile] = await Promise.all([
+            ChatSessionModel.findOne(
+              { user_id: userId, uuid: session.uuid },
+            ).populate('chatbot_id'),
+            UserProfileModel.findOne({ user_id: userId })
+          ]);
 
           if (!dbSession) {
               logger.error(`Error while adding message to session: ${session._id}`);
               throw new DatabaseException(new Error("Session not found"));
           }
 
+          const language = userProfile.language ?? 'en';
+        
           const userMessage: Message = {
             text: message,
             type: 'text',
@@ -43,7 +49,7 @@ export class ChatSessionService {
               resolve(chatSession);
             }
             console.log((dbSession.chatbot_id as ChatBot)?.prompt);
-            agent.sendMessageToAgent(userMessage.text, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
+            agent.sendMessageToAgent(userMessage.text, language, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
           });
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;
