@@ -38,19 +38,12 @@ export class IFSCService {
 
     const pipeline: any[] = [];
 
-    // 1) Text search for q (uses text index)
+    // Build a single leading $match to maximize index usage.
+    const match: FilterQuery<IFSCCode> & { $text?: any } = {};
     if (q && q.trim()) {
       const cleaned = this.sanitizeTextQuery(q.trim());
-      if (cleaned) {
-        pipeline.push({ $match: { $text: { $search: cleaned } } });
-      } else {
-        // If everything was noise, fallback to original trimmed
-        pipeline.push({ $match: { $text: { $search: q.trim() } } });
-      }
+      match.$text = { $search: cleaned || q.trim() };
     }
-
-    // 2) Equality filters to leverage indexes
-    const match: FilterQuery<IFSCCode> = {};
     if (bank) match.bank = bank;
     if (bank_code) match.bank_code = bank_code;
     if (branch) match.branch = branch;
@@ -58,11 +51,19 @@ export class IFSCService {
     if (district) match.district = district;
     if (state) match.state = state;
     if (Object.keys(match).length) {
+      // Keep $match as the first stage so $text (if present) can use the text index.
       pipeline.push({ $match: match });
     }
 
-    // 3) Projection
-    pipeline.push({
+    // Use $facet so that 'total' avoids unnecessary sorting/projection work.
+    const recordsPipeline: any[] = [];
+    if (q) {
+      recordsPipeline.push({ $sort: { score: { $meta: 'textScore' } } });
+    } else {
+      recordsPipeline.push({ $sort: { bank: 1, city: 1, branch: 1 } });
+    }
+    recordsPipeline.push({ $skip: offset }, { $limit: limit });
+    recordsPipeline.push({
       $project: {
         _id: 0,
         ifsc: 1,
@@ -86,17 +87,9 @@ export class IFSCService {
       },
     });
 
-    // 4) Sort (if text search, sort by relevance)
-    if (q) {
-      pipeline.push({ $sort: { score: { $meta: 'textScore' } } });
-    } else {
-      pipeline.push({ $sort: { bank: 1, city: 1, branch: 1 } });
-    }
-
-    // 5) Facet for pagination and total
     pipeline.push({
       $facet: {
-        records: [{ $skip: offset }, { $limit: limit }],
+        records: recordsPipeline,
         total: [{ $count: 'count' }],
       },
     });
