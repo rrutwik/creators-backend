@@ -62,10 +62,10 @@ export class Agent {
     userUpdatedChatSession(chatSession);
     const pastMessages = this.getMessages(_chatSession);
     const prompt = ChatPromptTemplate.fromMessages([
-          SystemMessagePromptTemplate.fromTemplate(promptString),
-          SystemMessagePromptTemplate.fromTemplate(`User language is ${userLanguage} so try to answe in that language`),
-          new MessagesPlaceholder("history"),
-          HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
+      SystemMessagePromptTemplate.fromTemplate(promptString),
+      SystemMessagePromptTemplate.fromTemplate(`Always reply in ${languageMapping[userLanguage]}, with clarity and natural fluency. If the user switches languages, respond in the new language, while keeping your tone gentle and compassionate.`),
+      new MessagesPlaceholder("history"),
+      HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
     ]);
     const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
     logger.info(`Prompt: ${formattedPrompt}`);
