@@ -25,17 +25,12 @@ const IfscSchema = new Schema<IFSCCode & Document>({
 }, { timestamps: true, collection: 'ifsc_codes' });
 
 // Indexes
-// Unique lookup by IFSC
 IfscSchema.index({ ifsc: 1 }, { unique: true });
-// Common filter/sort pattern used in search
 IfscSchema.index({ bank: 1, city: 1, branch: 1 });
-// Equality filters
 IfscSchema.index({ bank_code: 1 });
 IfscSchema.index({ city: 1 });
 IfscSchema.index({ district: 1 });
 IfscSchema.index({ state: 1 });
-// Text search for q
 IfscSchema.index({ bank: 'text', branch: 'text', city: 'text', district: 'text', state: 'text' });
 
 export const IFSCCodeModel = getSecondDatabase('ifsc_codes', IfscSchema);
-// Avoid syncIndexes() at import-time to prevent startup delays/crashes

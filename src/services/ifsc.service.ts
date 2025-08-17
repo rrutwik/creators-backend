@@ -42,7 +42,13 @@ export class IFSCService {
     const match: FilterQuery<IFSCCode> & { $text?: any } = {};
     if (q && q.trim()) {
       const cleaned = this.sanitizeTextQuery(q.trim());
-      match.$text = { $search: cleaned || q.trim() };
+      match.$or = [
+        // 1. Direct IFSC match or prefix regex
+        { ifsc: { $regex: `^${q.trim()}`, $options: 'i' } },
+    
+        // 2. Fallback to text search
+        { $text: { $search: cleaned || q.trim() } }
+      ];
     }
     if (bank) match.bank = bank;
     if (bank_code) match.bank_code = bank_code;
@@ -51,11 +57,9 @@ export class IFSCService {
     if (district) match.district = district;
     if (state) match.state = state;
     if (Object.keys(match).length) {
-      // Keep $match as the first stage so $text (if present) can use the text index.
       pipeline.push({ $match: match });
     }
 
-    // Use $facet so that 'total' avoids unnecessary sorting/projection work.
     const recordsPipeline: any[] = [];
     if (q) {
       recordsPipeline.push({ $sort: { score: { $meta: 'textScore' } } });

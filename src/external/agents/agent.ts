@@ -7,13 +7,23 @@ import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, Sy
 import { OPENAI_KEY, OPENAI_MODEL_NAME } from "@/config";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
-
+const languageMapping = {
+  en: "English",
+  hi: "Hindi",
+  te: "Telugu",
+  kn: "Kannada",
+  ml: "Malayalam",
+  ta: "Tamil",
+  gu: "Gujarati",
+  or: "Oriya",
+  pa: "Punjabi"
+}
 export class Agent {
   private chatHistory: BaseMessage[] = [];
   private chatGPTModel = new ChatOpenAI({
-    modelName: modelName,
     apiKey: OPENAI_KEY,
     temperature: 0,
+    model: modelName,
     callbacks: [{
       handleLLMEnd(output, runId, parentRunId, tags) {
         logger.debug(`${modelName} response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
@@ -30,7 +40,7 @@ export class Agent {
   private getMessages(chatSession: ChatSession) {
     const messages = chatSession.messages;
     const history: BaseMessage[] = [];
-  const lastFiveMessages = messages.slice(-5);
+    const lastFiveMessages = messages.slice(-5);
     lastFiveMessages.forEach((message) => {
       if (message.role === MessageRole.USER) {
         history.push(new HumanMessage(message.text));
