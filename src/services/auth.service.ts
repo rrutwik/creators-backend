@@ -29,7 +29,7 @@ export class AuthService {
       const isPasswordMatching: boolean = await compare(user.password, findUser.password);
       if (!isPasswordMatching) throw new HttpException(409, 'Password is not matching');
     }
-    const createdSession: Session = await this.sessionService.createSessionForUser(findUser);
+    const createdSession: Session = await this.sessionService.createSessionForUserId({ _id: findUser._id });
     return { sessionToken: createdSession.session_token, refreshToken: createdSession.refresh_token, user: findUser };
   }
 

@@ -2,9 +2,10 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthService } from '@services/auth.service';
 import { Container } from 'typedi';
+import { TokenExpiredError } from 'jsonwebtoken';
 import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
-import { getGoogleUserInfo, oauth2Client, scopes } from '@/external/googleapis';
+import { getGoogleUserInfo } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
 import { UserProfileModel } from '@/models/user_profile.model';
 
@@ -34,14 +35,17 @@ export class AuthController {
 
   public refreshToken = async (req: RefreshTokenRequest, res: Response, next: NextFunction) => {
     try {
-      const {refreshToken} = req.body;
-      const { sessionToken, refreshToken: newRefreshToken } = await this.authService.refreshToken(refreshToken);
+      const { refresh_token } = req.body;
+      const { sessionToken, refreshToken: newRefreshToken } = await this.authService.refreshToken(refresh_token);
       return res.status(200).json({ data: {
         sessionToken,
         refreshToken: newRefreshToken
-      }, message: 'login' });
+      }, message: 'refresh_token' });
     } catch (error) {
-      next(error);
+      if (error instanceof TokenExpiredError) {
+        return res.status(401).json({ data: error, message: 'Token expired' });
+      }
+      return res.status(401).json({ data: error, message: 'Invalid refresh token' });
     }
   }
 

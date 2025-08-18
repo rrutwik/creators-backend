@@ -78,9 +78,9 @@ export class Agent {
       HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
     ]);
     const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
-    logger.info(`Prompt: ${formattedPrompt}`);
+    logger.debug(`Prompt: ${formattedPrompt}`);
     const output = await this.chatGPTModel.invoke(formattedPrompt)
-    logger.info(`Agent response: ${JSON.stringify(output, null, 4)}`);
+    logger.debug(`Agent response: ${JSON.stringify(output, null, 4)}`);
     const agentMessage = output.content;
     return await ChatSessionModel.findOneAndUpdate(
       { _id: _chatSession._id },

@@ -31,7 +31,7 @@ export interface HandleMessageRequest extends RequestWithUser {
 
 export interface RefreshTokenRequest extends Request {
   body: {
-    refreshToken: string;
+    refresh_token: string;
   }
 }
 
