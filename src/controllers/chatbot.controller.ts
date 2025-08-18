@@ -35,7 +35,7 @@ export class ChatBotController {
       })]);
       const language = userProfile.language || 'en';
       chatBots = chatBots.map((chatBot) => {
-        chatBot.greeting = greetingPerReligionPerLanguage[language]?.[chatBot.religion] || chatBot.greeting;
+        chatBot.greeting = greetingPerReligionPerLanguage[language]?.[chatBot.religion.toLowerCase()] || chatBot.greeting;
         return chatBot;
       });
       return res.status(200).json({ records: chatBots, total: chatBots.length, message: 'ChatBots retrieved' });
