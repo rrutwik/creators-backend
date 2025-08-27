@@ -60,9 +60,19 @@ export class App {
   }
 
   private initializeMiddlewares() {
-    this.app.use(morgan(LOG_FORMAT, { stream }));
+    this.app.use(morgan(LOG_FORMAT, { stream: stream }));
     const origins = ORIGINS ? ORIGINS.split(',').map((origin) => origin.trim()) : [];
+    this.app.set("trust proxy", true);
     this.app.use(cors({ origin: origins, credentials: CREDENTIALS }));
+    this.app.use((req, res, next) => {
+      // Prefer Cloudflare header if present
+      const ip =
+        (req.headers["cf-connecting-ip"] as string) ||
+        req.ip;
+
+      logger.info(`Client IP: ${ip}`);
+      next();
+    });
     this.app.use(hpp());
     this.app.use(helmet());
     this.app.use(compression());

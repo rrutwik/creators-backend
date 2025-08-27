@@ -1,10 +1,9 @@
 import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
 import winston from 'winston';
 import winstonDaily from 'winston-daily-rotate-file';
 import { LOG_DIR } from '@config';
 import { Logger } from 'winston';
-import { Console } from 'winston/lib/winston/transports';
+import { StreamOptions } from 'morgan';
 
 // logs dir
 const logDir: string = LOG_DIR;
@@ -63,9 +62,9 @@ logger.add(
   }),
 );
 
-const stream = {
+const stream: StreamOptions = {
   write: (message: string) => {
-    logger.info(message.substring(0, message.lastIndexOf('\n')));
+    logger.info(message.trim());
   },
 };
 
