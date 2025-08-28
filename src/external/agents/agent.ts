@@ -7,6 +7,7 @@ import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, Sy
 import { OPENAI_KEY, OPENAI_MODEL_NAME, MAXIMUM_CHAT_BUFFER } from "@/config";
 import Redis from "ioredis";
 import { RedisCache } from "@langchain/community/caches/ioredis";
+import { sha256 } from "@langchain/core/utils/hash/sha256";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -25,24 +26,55 @@ const redisUrl = "redis://127.0.0.1:6379";
 const client = new Redis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: true,
+  keyPrefix: "langchain",
   db: 10
 });
 
-const cache = new RedisCache(client, {
-  ttl: 4000
-});
+let cacheClient = null;
+
+function getCacheClient() {
+  if (cacheClient) return cacheClient;
+  cacheClient = new RedisCache(client, {
+    ttl: 4000
+  });
+  cacheClient.makeDefaultKeyEncoder(sha256);
+  return cacheClient;
+}
+
+console.log({
+  OPENAI_KEY,
+  OPENAI_MODEL_NAME,
+  MAXIMUM_CHAT_BUFFER
+})
 
 export class Agent {
-  private chatHistory: BaseMessage[] = [];
-
   private chatGPTModel = new ChatOpenAI({
     apiKey: OPENAI_KEY,
     temperature: 0,
     model: modelName,
-    cache: cache,
+    cache: getCacheClient(),
     callbacks: [{
-      handleLLMEnd(output, runId, parentRunId, tags) {
+      handleLLMEnd(output, runId, parentRunId, tags, metadata) {
         logger.debug(`${modelName} response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
+
+        // Log rate limit info from response headers if available
+        if (
+          metadata &&
+          typeof metadata === "object" &&
+          "response" in metadata &&
+          metadata.response &&
+          typeof (metadata.response as any).headers?.get === "function"
+        ) {
+          const headers = (metadata.response as any).headers;
+          const remainingRequests = headers.get("x-ratelimit-remaining-requests");
+          const remainingTokens = headers.get("x-ratelimit-remaining-tokens");
+          const resetRequests = headers.get("x-ratelimit-reset-requests");
+          const resetTokens = headers.get("x-ratelimit-reset-tokens");
+
+          logger.debug(
+            `Rate Limit Info -> Remaining Requests: ${remainingRequests}, Remaining Tokens: ${remainingTokens}, Reset Requests: ${resetRequests}, Reset Tokens: ${resetTokens}`
+          );
+        }
       },
       handleLLMError(error, runId, parentRunId, tags) {
         logger.error(`${modelName} error: ${error} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
@@ -96,7 +128,7 @@ export class Agent {
       ]);
       const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
       logger.debug(`Prompt: ${formattedPrompt}`);
-      const readStream = await this.chatGPTModel.stream(formattedPrompt)
+      const readStream = await this.chatGPTModel.invoke(formattedPrompt)
       const chatSession = await ChatSessionModel.findOneAndUpdate(
         { _id: _chatSession._id },
         {
@@ -111,30 +143,30 @@ export class Agent {
         { new: true }
       );
       const messageId = chatSession.messages[chatSession.messages.length - 1]._id;
-      let content = "";
+      let content = readStream.content;
       let previousContent = "";
-      for await (const chunk of readStream) {
-        previousContent = content;
-        content += chunk.content;
-        const maxChatBuffer = parseInt(MAXIMUM_CHAT_BUFFER ?? "15");
-        if (content.length - previousContent.length > maxChatBuffer) {
-          await ChatSessionModel.findOneAndUpdate(
-            { _id: _chatSession._id },
-            {
-              $set: {
-                "messages.$[message].text": content
-              }
-            },
-            {
-              arrayFilters: [
-                {
-                  "message._id": messageId
-                }
-              ]
-            }
-          );
-        }
-      }
+      // for await (const chunk of readStream) {
+      //   previousContent = content;
+      //   content += chunk.content;
+      //   const maxChatBuffer = parseInt(MAXIMUM_CHAT_BUFFER ?? "15");
+      //   if (content.length - previousContent.length > maxChatBuffer) {
+      //     await ChatSessionModel.findOneAndUpdate(
+      //       { _id: _chatSession._id },
+      //       {
+      //         $set: {
+      //           "messages.$[message].text": content
+      //         }
+      //       },
+      //       {
+      //         arrayFilters: [
+      //           {
+      //             "message._id": messageId
+      //           }
+      //         ]
+      //       }
+      //     );
+      //   }
+      // }
       logger.debug(`Agent response: ${JSON.stringify(content, null, 4)}`);
       const agentMessage = content;
       await ChatSessionModel.findOneAndUpdate(

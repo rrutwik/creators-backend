@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'fs';
 import winston from 'winston';
 import winstonDaily from 'winston-daily-rotate-file';
-import { LOG_DIR } from '@config';
+import { LOG_DIR, NODE_ENV } from '@config';
 import { Logger } from 'winston';
 import { StreamOptions } from 'morgan';
 import path from 'path';
@@ -32,6 +32,7 @@ const getCallerInfo = (): string => {
  * error: 0, warn: 1, info: 2, http: 3, verbose: 4, debug: 5, silly: 6
  */
 const logger: Logger = winston.createLogger({
+  level: 'debug',
   format: winston.format.combine(
     winston.format.timestamp({
       format: 'YYYY-MM-DD HH:mm:ss',
@@ -67,7 +68,7 @@ const logger: Logger = winston.createLogger({
 
 // If we're not in production then log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-if (process.env.NODE_ENV !== 'production') {
+if (NODE_ENV === 'production') {
   logger.add(new winston.transports.Console({
     level: "debug",
     format: winston.format.combine(winston.format.splat(), winston.format.colorize())

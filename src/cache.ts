@@ -33,8 +33,10 @@ class HybridCache {
 
   public async get<T = unknown>(key: CacheKey): Promise<T | undefined> {
     const memHit = this.memoryCache.get(key) as T | undefined;
-    logger.debug(`Memory Cache get for key: ${key}`);
-    if (memHit !== undefined) return memHit;
+    if (memHit !== undefined) {
+      logger.debug(`Memory Cache get for key: ${key}`);
+      return memHit;
+    }
 
     const redisValue = await this.redis.get(key);
     if (redisValue) {

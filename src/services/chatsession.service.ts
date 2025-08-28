@@ -11,6 +11,7 @@ import { Service } from "typedi";
 
 @Service()
 export class ChatSessionService {
+    private agent = new Agent();
     public async createChatSession(user: User, name: string = 'Chat Session', chatbotId: string): Promise<ChatSession> {
         const data: ChatSession = { user_id: user._id, name: name, chatbot_id: chatbotId };
         const session = await ChatSessionModel.create(data);
@@ -43,13 +44,11 @@ export class ChatSessionService {
             role: MessageRole.USER,
           };
 
-          const agent = new Agent();
           return await new Promise((resolve, reject) => {
             const userUpdatedChatSession = (chatSession: ChatSession) => {
               resolve(chatSession);
             }
-            console.log((dbSession.chatbot_id as ChatBot)?.prompt);
-            agent.sendMessageToAgent(userMessage.text, language, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
+            this.agent.sendMessageToAgent(userMessage.text, language, dbSession, (dbSession.chatbot_id as ChatBot)?.prompt, userUpdatedChatSession);
           });
         } catch (error) {
             const errorMessage = `Error while adding message to session: ${session._id}`;
