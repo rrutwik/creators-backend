@@ -5,7 +5,7 @@ const SessionSchema: Schema = new Schema({
     user_id: {
         type: String,
         required: true,
-        unique: true,
+        index: true,
     },
     session_token: {
         type: String,
