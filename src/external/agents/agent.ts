@@ -70,30 +70,35 @@ export class Agent {
       { new: true }
     );
     userUpdatedChatSession(chatSession);
-    const pastMessages = this.getMessages(_chatSession);
-    const prompt = ChatPromptTemplate.fromMessages([
-      SystemMessagePromptTemplate.fromTemplate(promptString),
-      SystemMessagePromptTemplate.fromTemplate(`Always reply in ${languageMapping[userLanguage]}, with clarity and natural fluency. If the user switches languages, respond in the new language, while keeping your tone gentle and compassionate.`),
-      new MessagesPlaceholder("history"),
-      HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
-    ]);
-    const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
-    logger.debug(`Prompt: ${formattedPrompt}`);
-    const output = await this.chatGPTModel.invoke(formattedPrompt)
-    logger.debug(`Agent response: ${JSON.stringify(output, null, 4)}`);
-    const agentMessage = output.content;
-    return await ChatSessionModel.findOneAndUpdate(
-      { _id: _chatSession._id },
-      {
-        can_message: true,
-        $push: {
-          messages: {
-            text: agentMessage,
-            role: MessageRole.ASSISTANT
+    try {
+      const pastMessages = this.getMessages(_chatSession);
+      const prompt = ChatPromptTemplate.fromMessages([
+        SystemMessagePromptTemplate.fromTemplate(promptString),
+        SystemMessagePromptTemplate.fromTemplate(`Always reply in 1. ${languageMapping[userLanguage]} or 2. Language in which user is chatting (last message), with clarity and natural fluency. If the user switches languages, respond in the new language, while keeping your tone gentle and compassionate.`),
+        new MessagesPlaceholder("history"),
+        HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
+      ]);
+      const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
+      logger.debug(`Prompt: ${formattedPrompt}`);
+      const output = await this.chatGPTModel.invoke(formattedPrompt)
+      logger.debug(`Agent response: ${JSON.stringify(output, null, 4)}`);
+      const agentMessage = output.content;
+      return await ChatSessionModel.findOneAndUpdate(
+        { _id: _chatSession._id },
+        {
+          can_message: true,
+          $push: {
+            messages: {
+              text: agentMessage,
+              role: MessageRole.ASSISTANT
+            }
           }
-        }
-      },
-      { new: true }
-    );
+        },
+        { new: true }
+      );
+    } catch (error) {
+      // if error is of chatgpt 
+      logger.error(`Error while adding message to session: ${_chatSession._id} ${error} ${error.stack}`);
+    }
   }
 }
