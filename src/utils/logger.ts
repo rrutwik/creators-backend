@@ -4,20 +4,28 @@ import winstonDaily from 'winston-daily-rotate-file';
 import { LOG_DIR } from '@config';
 import { Logger } from 'winston';
 import { StreamOptions } from 'morgan';
+import path from 'path';
 
 // logs dir
 const logDir: string = LOG_DIR;
-
-console.log({
-  logDir
-});
 
 if (!existsSync(logDir)) {
   mkdirSync(logDir);
 }
 
-// Define log format
-const logFormat = winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`);
+// Get the file name and line number
+const getCallerInfo = (): string => {
+  const stack = new Error().stack.split('\n');
+  // The actual caller will be the 4th line in the stack trace
+  const callerLine = stack[3] || '';
+  const match = callerLine.match(/\/([^/]+\.[^:]+):(\d+):(\d+)/) || [];
+  if (match.length >= 4) {
+    const fileName = path.basename(match[1]);
+    const lineNumber = match[2];
+    return `${fileName}:${lineNumber}`;
+  }
+  return '';
+};
 
 /*
  * Log Level
@@ -28,44 +36,64 @@ const logger: Logger = winston.createLogger({
     winston.format.timestamp({
       format: 'YYYY-MM-DD HH:mm:ss',
     }),
-    logFormat,
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    winston.format.json()
   ),
   transports: [
     // debug log setting
     new winstonDaily({
       level: 'debug',
       datePattern: 'YYYY-MM-DD',
-      dirname: logDir + '/debug', // log file /logs/debug/*.log in save
+      dirname: logDir + '/debug',
       filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
-      json: false,
+      maxFiles: 100,
+      json: true,
       zippedArchive: true,
     }),
     // error log setting
     new winstonDaily({
       level: 'error',
       datePattern: 'YYYY-MM-DD',
-      dirname: logDir + '/error', // log file /logs/error/*.log in save
+      dirname: logDir + '/error',
       filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
+      maxFiles: 100,
       handleExceptions: true,
-      json: false,
+      json: true,
       zippedArchive: true,
     })
   ],
 });
 
-logger.add(
-  new winston.transports.Console({
-    level: 'debug',
-    format: winston.format.combine(winston.format.splat(), winston.format.colorize()),
-  }),
-);
+// If we're not in production then log to the `console` with the format:
+// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    level: "debug",
+    format: winston.format.combine(winston.format.splat(), winston.format.colorize())
+  }));
+}
 
-const stream: StreamOptions = {
-  write: (message: string) => {
-    logger.info(message.trim());
+// Create a custom logger that includes the caller info
+const customLogger = {
+  error: (message: string, ...meta: any[]) => {
+    logger.error(message, { caller: getCallerInfo(), ...meta });
+  },
+  warn: (message: string, ...meta: any[]) => {
+    logger.warn(message, { caller: getCallerInfo(), ...meta });
+  },
+  info: (message: string, ...meta: any[]) => {
+    logger.info(message, { caller: getCallerInfo(), ...meta });
+  },
+  debug: (message: string, ...meta: any[]) => {
+    logger.debug(message, { caller: getCallerInfo(), ...meta });
   },
 };
 
-export { logger, stream };
+const stream: StreamOptions = {
+  write: (message: string) => {
+    customLogger.info(message.trim());
+  },
+};
+
+export { customLogger as logger, stream };
