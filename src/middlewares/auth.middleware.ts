@@ -3,9 +3,8 @@ import { verify, TokenExpiredError } from 'jsonwebtoken';
 import { SECRET_KEY } from '@config';
 import { HttpException } from '@exceptions/HttpException';
 import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
-import { UserModel } from '@/models/user.model';
-import { SessionDBService } from '@/dbservice/session';
 import { logger } from '@/utils/logger';
+import { UserService } from '@/services/users.service';
 
 const getAuthorization = (req: RequestWithUser) => {
   const cookie = req.cookies['Authorization'];
@@ -18,25 +17,26 @@ const getAuthorization = (req: RequestWithUser) => {
 }
 
 export const AuthMiddleware = async (req: RequestWithUser, res: Response, next: NextFunction) => {
-  const sessionDBService = new SessionDBService();
+  const userService = new UserService();
   try {
     const Authorization = getAuthorization(req);
 
     if (Authorization) {
-      const session = await sessionDBService.getSessionBySessionToken(Authorization);
-      if (session) {
-        const { _id } = (verify(Authorization, SECRET_KEY)) as DataStoredInToken;
-        const findUser = await UserModel.findById(_id);
+      // const session = await sessionDBService.getSessionBySessionToken(Authorization);
+      // if (session) {
+      const { _id } = (verify(Authorization, SECRET_KEY)) as DataStoredInToken;
 
-        if (findUser) {
-          req.user = findUser;
-          next();
-        } else {
-          next(new HttpException(401, 'Wrong authentication token'));
-        }
+      const findUser = await userService.getUserFromID(_id);
+
+      if (findUser) {
+        req.user = findUser;
+        next();
       } else {
         next(new HttpException(401, 'Wrong authentication token'));
       }
+      // } else {
+      //   next(new HttpException(401, 'Wrong authentication token'));
+      // }
     } else {
       next(new HttpException(401, 'Authentication token missing'));
     }

@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { randomUUID } from 'crypto';
 import { Auth } from 'googleapis';
 import axios from 'axios';
+import { cache } from '@/cache';
 
 @Service()
 export class UserService {
@@ -27,5 +28,17 @@ export class UserService {
     }
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     return Buffer.from(response.data);
+  }
+  
+  public async getUserFromID(_id: string): Promise<User> {
+    const key = "auth:" + _id;
+    let findUser: User = await cache.get(key);
+    if (findUser) return findUser;
+    findUser = await UserModel.findById(_id);
+    if (findUser) {
+      cache.set(key, findUser, 30 * 60 * 1000);
+      return findUser;
+    }
+    return null;
   }
 }

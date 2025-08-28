@@ -1,15 +1,13 @@
 import { DatabaseException } from "@/exceptions/DependencyException";
 import { Session } from "@/interfaces/session.interface";
-import { User } from "@/interfaces/users.interface";
-import { ChatSessionModel } from "@/models/chat_session.model";
 import { SessionModel } from "@/models/session.model";
 import { logger } from "@/utils/logger";
 import { Service } from "typedi";
 
 @Service()
 export class SessionDBService {
-    public async createSessionForUserId(user_id: string, session_token: string, refresh_token: string) {
-        const data = { user_id, session_token, refresh_token };
+    public async createSessionForUserId(user_id: string, session_token: string, refresh_token: string, expiresAt: Date, refreshExpiresAt: Date) {
+        const data: Session = { _id: null, user_id, session_token, refresh_token, expiresAt, refreshExpiresAt };
         const session = await SessionModel.create(data);
         return session;
     }

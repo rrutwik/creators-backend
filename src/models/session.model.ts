@@ -16,8 +16,16 @@ const SessionSchema: Schema = new Schema({
         type: String,
         required: true,
         unique: true,
-    }
-});
+    },
+    expiresAt: {
+        type: Date,
+        required: true,
+    },
+    refreshExpiresAt: {
+        type: Date,
+        required: true,
+    },
+}, { timestamps: true });
 
 export const SessionModel = model<Session & Document>('session', SessionSchema);
 SessionModel.syncIndexes();
