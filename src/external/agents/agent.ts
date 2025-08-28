@@ -5,6 +5,8 @@ import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
 import { OPENAI_KEY, OPENAI_MODEL_NAME, MAXIMUM_CHAT_BUFFER } from "@/config";
+import Redis from "ioredis";
+import { RedisCache } from "@langchain/community/caches/ioredis";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -18,6 +20,18 @@ const languageMapping = {
   or: "Oriya",
   pa: "Punjabi"
 }
+const redisUrl = "redis://127.0.0.1:6379";
+
+const client = new Redis(redisUrl, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: true,
+  db: 10
+});
+
+const cache = new RedisCache(client, {
+  ttl: 4000
+});
+
 export class Agent {
   private chatHistory: BaseMessage[] = [];
 
@@ -25,6 +39,7 @@ export class Agent {
     apiKey: OPENAI_KEY,
     temperature: 0,
     model: modelName,
+    cache: cache,
     callbacks: [{
       handleLLMEnd(output, runId, parentRunId, tags) {
         logger.debug(`${modelName} response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);

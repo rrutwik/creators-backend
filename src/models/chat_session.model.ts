@@ -10,7 +10,8 @@ export enum MessageRole {
 const MessageSchema = new Schema({
     _id: {
         type: Schema.Types.ObjectId,
-        default: () => new Types.ObjectId()
+        default: () => new Types.ObjectId(),
+        index: true
     },
     type: {
         type: String,

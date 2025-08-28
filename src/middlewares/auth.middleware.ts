@@ -30,25 +30,25 @@ export const AuthMiddleware = async (req: RequestWithUser, res: Response, next: 
 
       if (findUser) {
         req.user = findUser;
-        next();
+        return next();
       } else {
-        next(new HttpException(401, 'Wrong authentication token'));
+        return next(new HttpException(401, 'Wrong authentication token'));
       }
       // } else {
       //   next(new HttpException(401, 'Wrong authentication token'));
       // }
     } else {
-      next(new HttpException(401, 'Authentication token missing'));
+      return next(new HttpException(401, 'Authentication token missing'));
     }
   } catch (error) {
     logger.info(`Error in auth middleware: ${error}`);
     logger.error(error);
     if (error instanceof TokenExpiredError) {
-      next(new HttpException(401, 'Token expired'));
+      return next(new HttpException(401, 'Token expired'));
     } else {
-      console.log('Other token verification error:', error.message);
+      logger.error(`Other token verification error: ${error}`);
     }
-    next(new HttpException(401, 'Wrong authentication token'));
+    return next(new HttpException(401, 'Wrong authentication token'));
   }
 };
 
