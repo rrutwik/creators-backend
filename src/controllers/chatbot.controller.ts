@@ -5,9 +5,12 @@ import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserProfileModel } from '@/models/user_profile.model';
 import { UserProfile } from '@/interfaces/users.interface';
 import { greetingPerReligionPerLanguage } from '@/data/greeting';
+import { Container } from 'typedi';
+import { UserService } from '@/services/users.service';
+import { cache } from '@/cache';
 
 export class ChatBotController {
-  // Create a new ChatBot
+  private userService = Container.get(UserService);
   public createChatBot = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const chatBotData: ChatBot = req.body;
@@ -18,21 +21,28 @@ export class ChatBotController {
     }
   };
 
+  private getChatBotsCached = async (): Promise<ChatBot[]> => {
+    const key = "chatbots";
+    let chatbots = await cache.get<ChatBot[]>(key);
+    if (chatbots) return chatbots;
+    chatbots = await ChatBotModel.find({}, {
+      _id: 1,
+      id: 1,
+      name: 1,
+      description: 1,
+      religion: 1,
+      avatar: 1,
+      greeting: 1,
+    });
+    cache.set<ChatBot[]>(key, chatbots, 30 * 60 * 1000);
+    return chatbots;
+  }
+
   // Get all ChatBots
   public getChatBots = async (_req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
       const user = _req.user;
-      let [chatBots, userProfile]: [ChatBot[], UserProfile] = await Promise.all([ChatBotModel.find({}, {
-        _id: 1,
-        id: 1,
-        name: 1,
-        description: 1,
-        religion: 1,
-        avatar: 1,
-        greeting: 1,
-      }), UserProfileModel.findOne({
-        user_id: user._id
-      })]);
+      let [chatBots, userProfile]: [ChatBot[], UserProfile] = await Promise.all([this.getChatBotsCached(), this.userService.getUserProfile(user._id)]);
       const language = userProfile.language || 'en';
       chatBots = chatBots.map((chatBot) => {
         chatBot.greeting = greetingPerReligionPerLanguage[language]?.[chatBot.religion.toLowerCase()] || chatBot.greeting;

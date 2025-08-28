@@ -41,4 +41,16 @@ export class UserService {
     }
     return null;
   }
+
+  public async getUserProfile(userId: string): Promise<UserProfile> {
+    const cacheKey = `user:profile:${userId}`;
+    const cachedProfile = await cache.get<UserProfile>(cacheKey);
+    if (cachedProfile) return cachedProfile;
+
+    const userProfile = await UserProfileModel.findOne({ user_id: userId });
+    if (userProfile) {
+      await cache.set(cacheKey, userProfile, 30 * 60 * 1000); // 30 minutes cache
+    }
+    return userProfile;
+  }
 }

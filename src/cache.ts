@@ -1,64 +1,88 @@
-import { LRUCache } from 'lru-cache';
-
-// Basic in-memory cache singleton using lru-cache
-// TTL is in milliseconds
-const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const DEFAULT_MAX_ITEMS = 1000;
+import Redis from "ioredis";
+import { LRUCache } from "lru-cache";
+import { logger } from "./utils/logger";
 
 export type CacheKey = string;
 
 export interface CacheOptions {
   ttl?: number; // ms
-  max?: number; // number of items
+  max?: number; // max in-memory items
 }
 
-class InMemoryCache {
-  private cache: LRUCache<CacheKey, unknown>;
+const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_MAX_ITEMS = 1000;
 
-  constructor(options?: CacheOptions) {
-    this.cache = new LRUCache<CacheKey, unknown>({
+class HybridCache {
+  private memoryCache: LRUCache<CacheKey, unknown>;
+  private redis: Redis;
+
+  constructor(options?: CacheOptions, redisUrl = "redis://127.0.0.1:6379") {
+    this.memoryCache = new LRUCache<CacheKey, unknown>({
       ttl: options?.ttl ?? DEFAULT_TTL_MS,
       max: options?.max ?? DEFAULT_MAX_ITEMS,
       allowStale: false,
       updateAgeOnGet: false,
       updateAgeOnHas: false,
     });
+
+    this.redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+    });
   }
 
-  public get<T = unknown>(key: CacheKey): T | undefined {
-    return this.cache.get(key) as T | undefined;
+  public async get<T = unknown>(key: CacheKey): Promise<T | undefined> {
+    const memHit = this.memoryCache.get(key) as T | undefined;
+    logger.debug(`Memory Cache get for key: ${key}`);
+    if (memHit !== undefined) return memHit;
+
+    const redisValue = await this.redis.get(key);
+    if (redisValue) {
+      logger.debug(`Redis Cache hit for key: ${key}`);
+      const parsed = JSON.parse(redisValue) as T;
+      this.memoryCache.set(key, parsed); // populate memory cache
+      return parsed;
+    }
+
+    logger.debug(`Redis Cache miss for key: ${key}`);
+  
+    return undefined;
   }
 
-  public set<T = unknown>(key: CacheKey, value: T, ttlMs?: number): void {
+  public async set<T = unknown>(key: CacheKey, value: T, ttlMs?: number): Promise<void> {
+    this.memoryCache.set(key, value, { ttl: ttlMs });
+    logger.debug(`Memory Cache set for key: ${key}`);
+
+    const data = JSON.stringify(value);
+    logger.debug(`Redis Cache set for key: ${key}`);
     if (ttlMs && ttlMs > 0) {
-      this.cache.set(key, value as unknown, { ttl: ttlMs });
+      await this.redis.set(key, data, "PX", ttlMs);
     } else {
-      this.cache.set(key, value as unknown);
+      await this.redis.set(key, data);
     }
   }
 
-  public del(key: CacheKey): void {
-    this.cache.delete(key);
+  public async del(key: CacheKey): Promise<void> {
+    this.memoryCache.delete(key);
+    await this.redis.del(key);
   }
 
-  public clear(): void {
-    this.cache.clear();
+  public async clear(): Promise<void> {
+    this.memoryCache.clear();
+    await this.redis.flushdb();
   }
 
-  // Helper: cache a promise-producing function ("wrap")
-  // Example:
-  //   const data = await cache.wrap(`user:${id}`, () => fetchUser(id), 60_000)
+  // Wrap helper (first check memory, then Redis, then call factory)
   public async wrap<T>(key: CacheKey, factory: () => Promise<T>, ttlMs?: number): Promise<T> {
-    const hit = this.get<T>(key);
-    if (hit !== undefined) return hit;
+    const cached = await this.get<T>(key);
+    if (cached !== undefined) return cached;
+
     const value = await factory();
-    this.set<T>(key, value, ttlMs);
+    await this.set(key, value, ttlMs);
     return value;
   }
 }
 
-// Export a default singleton instance
-export const cache = new InMemoryCache();
-
-// Also export the class in case a custom instance is needed
-export default InMemoryCache;
+// Default singleton
+export const cache = new HybridCache();
+export default HybridCache;
