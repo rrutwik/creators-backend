@@ -4,7 +4,7 @@ import { HumanMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/
 import { ChatSessionModel, MessageRole } from "@/models/chat_session.model";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
-import { OPENAI_KEY, OPENAI_MODEL_NAME } from "@/config";
+import { OPENAI_KEY, OPENAI_MODEL_NAME, MAXIMUM_CHAT_BUFFER } from "@/config";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -20,6 +20,7 @@ const languageMapping = {
 }
 export class Agent {
   private chatHistory: BaseMessage[] = [];
+
   private chatGPTModel = new ChatOpenAI({
     apiKey: OPENAI_KEY,
     temperature: 0,
@@ -55,7 +56,7 @@ export class Agent {
     return history;
   }
 
-  public async sendMessageToAgent(message: string, userLanguage: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<ChatSession> {
+  public async sendMessageToAgent(message: string, userLanguage: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<void> {
     const chatSession = await ChatSessionModel.findOneAndUpdate(
       { _id: _chatSession._id },
       {
@@ -80,21 +81,62 @@ export class Agent {
       ]);
       const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
       logger.debug(`Prompt: ${formattedPrompt}`);
-      const output = await this.chatGPTModel.invoke(formattedPrompt)
-      logger.debug(`Agent response: ${JSON.stringify(output, null, 4)}`);
-      const agentMessage = output.content;
-      return await ChatSessionModel.findOneAndUpdate(
+      const readStream = await this.chatGPTModel.stream(formattedPrompt)
+      const chatSession = await ChatSessionModel.findOneAndUpdate(
         { _id: _chatSession._id },
         {
-          can_message: true,
+          can_message: false,
           $push: {
             messages: {
-              text: agentMessage,
+              text: "",
               role: MessageRole.ASSISTANT
             }
           }
         },
         { new: true }
+      );
+      const messageId = chatSession.messages[chatSession.messages.length - 1]._id;
+      let content = "";
+      let previousContent = "";
+      for await (const chunk of readStream) {
+        previousContent = content;
+        content += chunk.content;
+        const maxChatBuffer = parseInt(MAXIMUM_CHAT_BUFFER ?? "15");
+        if (content.length - previousContent.length > maxChatBuffer) {
+          await ChatSessionModel.findOneAndUpdate(
+            { _id: _chatSession._id },
+            {
+              $set: {
+                "messages.$[message].text": content
+              }
+            },
+            {
+              arrayFilters: [
+                {
+                  "message._id": messageId
+                }
+              ]
+            }
+          );
+        }
+      }
+      logger.debug(`Agent response: ${JSON.stringify(content, null, 4)}`);
+      const agentMessage = content;
+      await ChatSessionModel.findOneAndUpdate(
+        { _id: _chatSession._id },
+        {
+          can_message: true,
+          $set: {
+            "messages.$[message].text": agentMessage
+          }
+        },
+        {
+          arrayFilters: [
+            {
+              "message._id": messageId
+            }
+          ]
+        }
       );
     } catch (error) {
       // if error is of chatgpt 
