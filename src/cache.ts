@@ -81,6 +81,16 @@ class HybridCache {
     await this.set(key, value, ttlMs);
     return value;
   }
+
+  public async testConnection(): Promise<boolean> {
+    try {
+      const pong = await this.redis.ping();
+      return pong === "PONG";
+    } catch (err) {
+      console.error("Redis connection failed:", err);
+      return false;
+    }
+  }
 }
 
 // Default singleton

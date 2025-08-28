@@ -13,6 +13,7 @@ import { Routes } from '@interfaces/routes.interface';
 import { ErrorMiddleware } from '@middlewares/error.middleware';
 import { logger, stream } from '@utils/logger';
 import cors from 'cors';
+import { cache } from './cache';
 
 export class App {
   public app: express.Application;
@@ -52,6 +53,12 @@ export class App {
       logger.info('Connecting to the database...');
       await dbConnection();
       logger.info('Database connected');
+      const redisConnected = await cache.testConnection();
+      if (!redisConnected) {
+        logger.error('Redis connection failed');
+        // send SIGINT
+        process.kill(process.pid, 'SIGINT');
+      }
     } catch (error) {
       logger.error(`Error connecting to the database: ${error}`);
       // send SIGINT
