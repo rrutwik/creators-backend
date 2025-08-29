@@ -36,9 +36,11 @@ export interface RefreshTokenRequest extends Request {
 }
 
 export interface GoogleLoginBody {
-  client_id: string;
-  credential: string;
-  select_by: string;
+  client_id?: string;
+  credential?: string;
+  select_by?: string;
+  code?: string;
+  redirect_uri?: string;
 }
 
 export interface GoogleLoginRequest extends Request {

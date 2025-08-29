@@ -5,9 +5,10 @@ import { Container } from 'typedi';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
-import { getGoogleUserInfo } from '@/external/googleapis';
+import { getGoogleUserInfo, getGoogleUserInfoFromCode } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
 import { UserProfileModel } from '@/models/user_profile.model';
+import { logger } from '@/utils/logger';
 
 export class AuthController {
   public authService = Container.get(AuthService);
@@ -78,7 +79,13 @@ export class AuthController {
   public googleLogin = async (req: GoogleLoginRequest, res: Response, next: NextFunction) => {
     try {
       const body: GoogleLoginBody = req.body;
-      const googleUser = await getGoogleUserInfo(body);
+      let googleUser;
+      logger.info(`Google login request: ${JSON.stringify(body)}`);
+      if (body.code) {
+        googleUser = await getGoogleUserInfoFromCode(body.code, body.redirect_uri);
+      } else {
+        googleUser = await getGoogleUserInfo(body);
+      }
       const email = googleUser.email;
       const picture = googleUser.picture;
       // Check if user exists
