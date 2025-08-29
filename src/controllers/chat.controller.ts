@@ -9,11 +9,25 @@ import { ChatSessionService } from '@/services/chatsession.service';
 import { logger } from '@/utils/logger';
 import { ChatSessionModel } from '@/models/chat_session.model';
 import { UserProfileModel } from '@/models/user_profile.model';
+import { Agent } from '@/external/agents/agent';
+import { ChatSession } from '@/interfaces/chatsession.interface';
+import { ChatBotModel } from '@/models/chat_bot.model';
 
 export class ChatController {
   public authService = Container.get(AuthService);
   public userService = Container.get(UserService);
   public chatSessionService = Container.get(ChatSessionService);
+
+  private agent = new Agent();
+
+  private async updateChatSessionName(chatSession: ChatSession, message: string): Promise<void> {
+    const chatBot = await ChatBotModel.findById(chatSession.chatbot_id);
+    const name = await this.agent.suggestChatSessionNameFromFirstMessage(message, chatBot);
+    await ChatSessionModel.updateOne(
+      { _id: chatSession._id },
+      { name }
+    );
+  }
 
   public handleMessageOfUser = async (req: HandleMessageRequest, res: Response, next: NextFunction) => {
     try {
@@ -25,7 +39,8 @@ export class ChatController {
       if (chatSessionUUID) {
         chatSession = await this.chatSessionService.getSessionByUUID(chatSessionUUID, user._id);
       } else {
-        chatSession = await this.chatSessionService.createChatSession(user, message.slice(0, 8), chatBotId);
+        chatSession = await this.chatSessionService.createChatSession(user, "...", chatBotId);
+        this.updateChatSessionName(chatSession, message);
       }
       if (!chatSession) {
         logger.error(`error: chat session not found`);

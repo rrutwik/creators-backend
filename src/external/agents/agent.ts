@@ -8,6 +8,7 @@ import { OPENAI_KEY, OPENAI_MODEL_NAME, MAXIMUM_CHAT_BUFFER } from "@/config";
 import Redis from "ioredis";
 import { RedisCache } from "@langchain/community/caches/ioredis";
 import { sha256 } from "@langchain/core/utils/hash/sha256";
+import { ChatBot } from "@/interfaces/chatbot.interface";
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -99,6 +100,17 @@ export class Agent {
       }
     });
     return history;
+  }
+
+  public async suggestChatSessionNameFromFirstMessage(message: string, bot: ChatBot): Promise<string> {
+    const botName = bot.name;
+    const botDescription = bot.description;
+    const prompt = await ChatPromptTemplate.fromMessages([
+      SystemMessagePromptTemplate.fromTemplate(`You are given a message from a user and a bot name and description he is using. Suggest a name for this chat session based on the message. Only suggest a name, do not add any additional text.`),
+      HumanMessagePromptTemplate.fromTemplate("Message: {message}\nBot Name: {botName}\nBot Description: {botDescription}")
+    ]);
+    const output = await this.chatGPTModel.invoke(await prompt.format({ message, botName, botDescription }));
+    return output.content as string;
   }
 
   public async sendMessageToAgent(message: string, userLanguage: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<void> {
