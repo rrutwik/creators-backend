@@ -42,8 +42,17 @@ export class UserService {
     return null;
   }
 
+  private getUserProfileKey(userId: string) {
+    return "user:profile:" + userId;
+  }
+
+  public async clearUserProfileCache(userId: string) {
+    const key = this.getUserProfileKey(userId.toString());
+    await cache.del(key);
+  }
+
   public async getUserProfile(userId: string): Promise<UserProfile> {
-    const cacheKey = `user:profile:${userId}`;
+    const cacheKey = this.getUserProfileKey(userId.toString());
     const cachedProfile = await cache.get<UserProfile>(cacheKey);
     if (cachedProfile) return cachedProfile;
 

@@ -120,7 +120,7 @@ export class Agent {
       const pastMessages = this.getMessages(_chatSession);
       const prompt = ChatPromptTemplate.fromMessages([
         SystemMessagePromptTemplate.fromTemplate(promptString),
-        SystemMessagePromptTemplate.fromTemplate(`Always reply in 1. ${languageMapping[userLanguage]} or 2. Language in which user is chatting (last message), with clarity and natural fluency. If the user switches languages, respond in the new language, while keeping your tone gentle and compassionate.`),
+        SystemMessagePromptTemplate.fromTemplate(`You are given chat history for reference with new user message. Reply in ${languageMapping[userLanguage]} language while keeping your tone gentle and compassionate.`),
         new MessagesPlaceholder("history"),
         HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
       ]);

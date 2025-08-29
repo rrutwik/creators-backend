@@ -44,6 +44,7 @@ export class ChatController {
         { user_id: user._id },
         { $inc: { credits: -1 } }  // Decreases the credits by 1
       );
+      this.userService.clearUserProfileCache(user._id);
       const updatedChatSession = await this.chatSessionService.addMessageToSession(chatSession, message, user._id);
       return res.status(200).json({ message: `message added to session ${updatedChatSession._id}`, data: updatedChatSession });
     } catch (error) {

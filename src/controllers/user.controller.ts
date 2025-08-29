@@ -9,6 +9,8 @@ import { ChatSession } from '@/interfaces/chatsession.interface';
 import { RAZORPAY_KEY, RAZORPAY_SECRET } from '@/config';
 import moment from 'moment-timezone';
 import { logger } from '@/utils/logger';
+import { UserService } from '@/services/users.service';
+import { Container } from 'typedi';
 
 var razorPayInstance = new Razorpay({
   key_id: RAZORPAY_KEY,
@@ -18,6 +20,7 @@ var razorPayInstance = new Razorpay({
 const totalTokensToAddPerRupee = 1;
 
 export class UserController {
+  private userService = Container.get(UserService);
   public getProfile = async (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
       const user: User = req.user;
@@ -45,6 +48,7 @@ export class UserController {
         throw new Error('Language not allowed');
       }
       const profile = await UserProfileModel.findOneAndUpdate({ user_id: user._id }, { language }, { new: true });
+      this.userService.clearUserProfileCache(user._id);
       return res.status(200).json({ data: profile });
     } catch (error) {
       next(error);

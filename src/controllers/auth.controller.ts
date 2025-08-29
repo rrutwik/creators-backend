@@ -103,6 +103,7 @@ export class AuthController {
           avatar: avatar
         }
       })
+      this.userService.clearUserProfileCache(user._id);
       const {sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);
       return res.status(200).json({ data: { user: loggedInUser, sessionToken, refreshToken }, message: 'login' });
     } catch (error) {
