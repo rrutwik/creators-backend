@@ -56,8 +56,6 @@ export class Agent {
     callbacks: [{
       handleLLMEnd(output, runId, parentRunId, tags, metadata) {
         logger.debug(`${modelName} response: ${JSON.stringify(output)} for runId: ${runId} with tags: ${tags} and parentRunId: ${parentRunId}`);
-
-        // Log rate limit info from response headers if available
         if (
           metadata &&
           typeof metadata === "object" &&
