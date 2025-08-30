@@ -9,6 +9,7 @@ import Redis from "ioredis";
 import { RedisCache } from "@langchain/community/caches/ioredis";
 import { sha256 } from "@langchain/core/utils/hash/sha256";
 import { ChatBot } from "@/interfaces/chatbot.interface";
+import { throttle } from 'lodash';
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -35,9 +36,7 @@ let cacheClient = null;
 
 function getCacheClient() {
   if (cacheClient) return cacheClient;
-  cacheClient = new RedisCache(client, {
-    ttl: 4000
-  });
+  cacheClient = new RedisCache(client);
   cacheClient.makeDefaultKeyEncoder(sha256);
   return cacheClient;
 }
@@ -138,7 +137,7 @@ export class Agent {
       ]);
       const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
       logger.debug(`Prompt: ${formattedPrompt}`);
-      const readStream = await this.chatGPTModel.invoke(formattedPrompt)
+      const readStream = await this.chatGPTModel.stream(formattedPrompt)
       const chatSession = await ChatSessionModel.findOneAndUpdate(
         { _id: _chatSession._id },
         {
@@ -153,30 +152,24 @@ export class Agent {
         { new: true }
       );
       const messageId = chatSession.messages[chatSession.messages.length - 1]._id;
-      let content = readStream.content;
-      let previousContent = "";
-      // for await (const chunk of readStream) {
-      //   previousContent = content;
-      //   content += chunk.content;
-      //   const maxChatBuffer = parseInt(MAXIMUM_CHAT_BUFFER ?? "15");
-      //   if (content.length - previousContent.length > maxChatBuffer) {
-      //     await ChatSessionModel.findOneAndUpdate(
-      //       { _id: _chatSession._id },
-      //       {
-      //         $set: {
-      //           "messages.$[message].text": content
-      //         }
-      //       },
-      //       {
-      //         arrayFilters: [
-      //           {
-      //             "message._id": messageId
-      //           }
-      //         ]
-      //       }
-      //     );
-      //   }
-      // }
+      let content = "";
+
+      // Create message updater with database update logic
+      const updateMessageInDb = async (newContent: string) => {
+        await ChatSessionModel.findOneAndUpdate(
+          { _id: _chatSession._id },
+          { $set: { "messages.$[message].text": newContent, updatedAt: new Date() } },
+          { arrayFilters: [{ "message._id": messageId }] }
+        );
+      };
+
+      const throttleUpdate = throttle(updateMessageInDb, 500);
+
+      for await (const chunk of readStream) {
+        content += chunk.content;
+        throttleUpdate(content);
+      }
+
       logger.debug(`Agent response: ${JSON.stringify(content, null, 4)}`);
       const agentMessage = content;
       await ChatSessionModel.findOneAndUpdate(

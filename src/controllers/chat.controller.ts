@@ -101,6 +101,7 @@ export class ChatController {
           name: 1,
           uuid: 1,
           updatedAt: 1,
+          can_message: 1,
           chatbot_id: 1
         }, {
           sort: {
