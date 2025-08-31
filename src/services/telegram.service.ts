@@ -33,10 +33,11 @@ export class TelegramService {
     }
 
     public async generateMessageToBotQRCode(phone: string, expiresAt: number): Promise<{ qrCode: string, token: string }> {
-        const token = crypto.createHash('sha256').update(phone).digest('hex');
+        const token = crypto.randomBytes(10).toString('hex'); // 8 chars
         cache.set(this.getQRCodeCacheKey(token), JSON.stringify({
             phone,
-            expiresAt
+            expiresAt,
+            authenticated: false
         }), expiresAt);
         const startLink = `https://t.me/${this.botUsername}?start=${token}`;
         const qrCode = await QRCode.toDataURL(startLink);
@@ -45,53 +46,58 @@ export class TelegramService {
 
     public getWebhookHandler() {
         return async (req: Request, res: Response) => {
-            const update = req.body;
+            try {
+                const update = req.body;
 
-            if (update.message?.text?.startsWith("/start")) {
-                const chatId = update.message.chat.id;
-                const token = update.message.text.split(" ")[1];
+                if (update.message?.text?.startsWith("/start")) {
+                    const chatId = update.message.chat.id;
+                    const token = update.message.text.split(" ")[1];
 
-                const sessionRaw: string = await cache.get(this.getQRCodeCacheKey(token));
-                if (!sessionRaw) {
-                    logger.error(`Session expired or invalid token: ${token}`);
-                    await bot.sendMessage(chatId, "Session expired or invalid token");
-                    return res.sendStatus(200);
-                }
+                    const sessionRaw: string = await cache.get(this.getQRCodeCacheKey(token));
+                    if (!sessionRaw) {
+                        logger.error(`Session expired or invalid token: ${token}`);
+                        await bot.sendMessage(chatId, "Session expired or invalid token");
+                        return res.sendStatus(200);
+                    }
 
-                const session = JSON.parse(sessionRaw as string);
-                await bot.sendMessage(chatId, `Press the button to share your OTP`, {
-                    reply_markup: {
-                        inline_keyboard: [
-                            [
-                                { text: "Share Login OTP", callback_data: `otp:${token}:${session.otp}` },
+                    const session = JSON.parse(sessionRaw as string);
+                    await bot.sendMessage(chatId, `Press the button to share your OTP`, {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [
+                                    { text: "Share Login OTP", callback_data: `otp:${token}:${session.otp}` },
+                                ],
                             ],
-                        ],
-                    },
-                });
-            }
-
-            if (update.callback_query?.data?.startsWith("otp:")) {
-                const [prefix, token, otp] = update.callback_query.data.split(":");
-                const chatId = update.callback_query.message.chat.id;
-
-                const sessionRaw: string = await cache.get(this.getQRCodeCacheKey(token));
-                if (!sessionRaw) {
-                    await bot.sendMessage(chatId, "Session expired or invalid OTP");
-                    return res.sendStatus(200);
+                        },
+                    });
                 }
 
-                const session = JSON.parse(sessionRaw);
-                if (session.otp !== otp) {
-                    await bot.sendMessage(chatId, "Invalid OTP");
-                    return res.sendStatus(200);
+                if (update.callback_query?.data?.startsWith("otp:")) {
+                    const [prefix, token, otp] = update.callback_query.data.split(":");
+                    const chatId = update.callback_query.message.chat.id;
+
+                    const sessionRaw: string = await cache.get(this.getQRCodeCacheKey(token));
+                    if (!sessionRaw) {
+                        await bot.sendMessage(chatId, "Session expired or invalid OTP");
+                        return res.sendStatus(200);
+                    }
+
+                    const session = JSON.parse(sessionRaw);
+                    if (session.otp !== otp) {
+                        await bot.sendMessage(chatId, "Invalid OTP");
+                        return res.sendStatus(200);
+                    }
+
+                    session.authenticated = true;
+                    await cache.set(this.getQRCodeCacheKey(token), JSON.stringify(session), 300);
+                    await bot.sendMessage(chatId, "✅ Your phone number is authenticated!");
                 }
 
-                session.authenticated = true;
-                await cache.set(this.getQRCodeCacheKey(token), JSON.stringify(session), 300);
-                await bot.sendMessage(chatId, "✅ Your phone number is authenticated!");
+                return res.sendStatus(200);
+            } catch (error) {
+                logger.error(`Error in webhook handler: ${error}`);
+                return res.sendStatus(500);
             }
-
-            return res.sendStatus(200);
         };
     }
 }
