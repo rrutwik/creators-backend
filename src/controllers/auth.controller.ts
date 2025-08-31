@@ -3,18 +3,23 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthService } from '@services/auth.service';
 import { Container } from 'typedi';
 import { TokenExpiredError } from 'jsonwebtoken';
-import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
+import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser, SendOTPRequest } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
 import { getGoogleUserInfo, getGoogleUserInfoFromCode } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
 import { UserProfileModel } from '@/models/user_profile.model';
 import { logger } from '@/utils/logger';
+import { Auth } from 'googleapis';
+import { TelegramService } from '@/services/telegram.service';
 
 export class AuthController {
-  public authService = Container.get(AuthService);
-  public userService = Container.get(UserService);
+  private authService = Container.get(AuthService);
+  private userService = Container.get(UserService);
+  private telegramService = Container.get(TelegramService);
 
-  public signUp = async (req: Request, res: Response, next: NextFunction) => {
+  public telegramWebhook = this.telegramService.getWebhookHandler();
+
+  public getOTP = async (req: SendOTPRequest, res: Response, next: NextFunction) => {
     try {
       const userData: User = req.body;
       const signUpUserData: User = await this.authService.signup(userData);
@@ -22,7 +27,7 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
   public logIn = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -38,10 +43,12 @@ export class AuthController {
     try {
       const { refresh_token } = req.body;
       const { sessionToken, refreshToken: newRefreshToken } = await this.authService.refreshToken(refresh_token);
-      return res.status(200).json({ data: {
-        sessionToken,
-        refreshToken: newRefreshToken
-      }, message: 'refresh_token' });
+      return res.status(200).json({
+        data: {
+          sessionToken,
+          refreshToken: newRefreshToken
+        }, message: 'refresh_token'
+      });
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         return res.status(401).json({ data: error, message: 'Token expired' });
@@ -66,11 +73,13 @@ export class AuthController {
   public me = async (req: RequestWithUser, res: Response, next: NextFunction) => {
     try {
       const userData: User = req.user;
-      const userProfile = (await UserProfileModel.findOne({ user_id: userData._id }));
-      return res.status(200).json({ data: {
-        ...userProfile.toJSON(),
-        email: userData.email
-      }, message: 'user_info' });
+      const userProfile = await UserProfileModel.findOne({ user_id: userData._id });
+      return res.status(200).json({
+        data: {
+          ...userProfile.toJSON(),
+          email: userData.email
+        }, message: 'user_info'
+      });
     } catch (error) {
       next(error);
     }
@@ -79,8 +88,8 @@ export class AuthController {
   public googleLogin = async (req: GoogleLoginRequest, res: Response, next: NextFunction) => {
     try {
       const body: GoogleLoginBody = req.body;
-      let googleUser;
-      logger.info(`Google login request: ${JSON.stringify(body)}`);
+      let googleUser: Auth.TokenPayload;
+      logger.debug(`Google login request: ${JSON.stringify(body)}`);
       if (body.code) {
         googleUser = await getGoogleUserInfoFromCode(body.code, body.redirect_uri);
       } else {
@@ -102,10 +111,19 @@ export class AuthController {
           last_name: googleUser.family_name,
           avatar: avatar
         }
+      }, {
+        new: true
       })
-      this.userService.clearUserProfileCache(user._id);
-      const {sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);
-      return res.status(200).json({ data: { user: loggedInUser, sessionToken, refreshToken }, message: 'login' });
+      await this.userService.clearUserProfileCache(user._id);
+      const updatedUserProfile = await this.userService.getUserProfile(user._id);
+      const { sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);  
+      user = {
+        ...updatedUserProfile,
+        ...loggedInUser,
+        email: user.email,
+        phone: user.phone
+      }
+      return res.status(200).json({ data: { user, sessionToken, refreshToken }, message: 'login' });
     } catch (error) {
       next(error);
     }

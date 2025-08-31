@@ -22,5 +22,6 @@ export class AuthRoute implements Routes {
     this.router.post(`${this.path}refresh_token`, ValidationMiddleware(UserRefreshTokenDto), this.auth.refreshToken);
     // google auth
     this.router.post(`${this.path}google_login`, this.auth.googleLogin);
+    this.router.post(`${this.path}telegram-webhook`, this.auth.telegramWebhook);
   }
 }
