@@ -2,6 +2,7 @@ import { Service } from 'typedi';
 import { FilterQuery } from 'mongoose';
 import { IFSCCode } from '@/interfaces/ifsc_code.interface';
 import { IFSCCodeModel } from '@/models/data/ifsc_code.model';
+import { cache } from '@/cache';
 
 export interface IFSCSearchParams {
   q?: string;
@@ -36,39 +37,38 @@ export class IFSCService {
       offset = 0,
     } = params;
 
-    const pipeline: any[] = [];
+    const filter: any = {};
 
-    // Build a single leading $match to maximize index usage.
-    const match: FilterQuery<IFSCCode> & { $text?: any } = {};
     if (q && q.trim()) {
       const cleaned = this.sanitizeTextQuery(q.trim());
-      match.$or = [
-        // 1. Direct IFSC match or prefix regex
-        { ifsc: { $regex: `^${q.trim()}`, $options: 'i' } },
-    
-        // 2. Fallback to text search
-        { $text: { $search: cleaned || q.trim() } }
-      ];
-    }
-    if (bank) match.bank = bank;
-    if (bank_code) match.bank_code = bank_code;
-    if (branch) match.branch = branch;
-    if (city) match.city = city;
-    if (district) match.district = district;
-    if (state) match.state = state;
-    if (Object.keys(match).length) {
-      pipeline.push({ $match: match });
+
+      // If the query looks like an IFSC code, do a regex prefix search
+      if (/^[A-Z0-9]{4}0[A-Z0-9]{6}$/i.test(q)) {
+        filter.ifsc = { $regex: `^${q.trim()}`, $options: 'i' };
+      } else {
+        filter.$text = { $search: cleaned || q.trim() };
+      }
     }
 
-    const recordsPipeline: any[] = [];
-    if (q) {
-      recordsPipeline.push({ $sort: { score: { $meta: 'textScore' } } });
-    } else {
-      recordsPipeline.push({ $sort: { bank: 1, city: 1, branch: 1 } });
+    if (bank) filter.bank = bank;
+    if (bank_code) filter.bank_code = bank_code;
+    if (branch) filter.branch = branch;
+    if (city) filter.city = city;
+    if (district) filter.district = district;
+    if (state) filter.state = state;
+
+    const cacheKey = `ifsc_search_${JSON.stringify(filter)}`;
+    let total = await cache.get(cacheKey);
+    if (!total) {
+      total = await IFSCCodeModel.countDocuments(filter);
+      await cache.set(cacheKey, total, 60 * 60 * 24 * 7);
     }
-    recordsPipeline.push({ $skip: offset }, { $limit: limit });
-    recordsPipeline.push({
-      $project: {
+    total = parseInt(total as string);
+    const records = await IFSCCodeModel.find(filter)
+      .skip(offset)
+      .limit(limit)
+      .sort(q ? { score: { $meta: 'textScore' } } : { bank: 1, city: 1, branch: 1 })
+      .select({
         _id: 0,
         ifsc: 1,
         bank: 1,
@@ -88,22 +88,11 @@ export class IFSCService {
         upi: 1,
         type: 1,
         ...(q ? { score: { $meta: 'textScore' } } : {}),
-      },
-    });
+      });
 
-    pipeline.push({
-      $facet: {
-        records: recordsPipeline,
-        total: [{ $count: 'count' }],
-      },
-    });
-
-    const agg = await IFSCCodeModel.aggregate(pipeline).allowDiskUse(true);
-    const first = agg?.[0] || { records: [], total: [] };
-    const total = first.total?.[0]?.count || 0;
-
-    return { records: first.records, total, limit, offset };
+    return { records, total, limit, offset };
   }
+
 
   // Remove generic noise terms so queries like "SBI Bank" behave like "SBI"
   private sanitizeTextQuery(input: string) {
@@ -119,23 +108,53 @@ export class IFSCService {
     return parts.join(' ');
   }
 
+  private getDistinctBanksForCacheKey(filter: FilterQuery<IFSCCode>) {
+    const cacheKey = `distinctBanks_${JSON.stringify(filter)}`;
+    return cacheKey;
+  }
+
   public async distinctBanks(city?: string) {
     const filter: FilterQuery<IFSCCode> = {};
     if (city) filter.city = new RegExp(this.escapeRegex(city), 'i');
-    return IFSCCodeModel.distinct('bank', filter);
+    const cacheKey = this.getDistinctBanksForCacheKey(filter);
+    let cached = await cache.get(cacheKey);
+    if (cached) return cached;
+    const result = await IFSCCodeModel.distinct('bank', filter);
+    await cache.set(cacheKey, result, 60 * 60 * 24 * 7);
+    return result;
+  }
+
+  private getDistinctCitiesForCacheKey(filter: FilterQuery<IFSCCode>) {
+    const cacheKey = `distinctCities_${JSON.stringify(filter)}`;
+    return cacheKey;
   }
 
   public async distinctCities(bank?: string) {
     const filter: FilterQuery<IFSCCode> = {};
     if (bank) filter.bank = new RegExp(this.escapeRegex(bank), 'i');
-    return IFSCCodeModel.distinct('city', filter);
+    const cacheKey = this.getDistinctCitiesForCacheKey(filter);
+    const cached = await cache.get(cacheKey);
+    if (cached) return cached;
+    const result = await IFSCCodeModel.distinct('city', filter);
+    await cache.set(cacheKey, result, 60 * 60 * 24 * 7);
+    return result;
   }
 
   public async distinctBranches(bank?: string, city?: string) {
     const filter: FilterQuery<IFSCCode> = {};
     if (bank) filter.bank = new RegExp(this.escapeRegex(bank), 'i');
     if (city) filter.city = new RegExp(this.escapeRegex(city), 'i');
-    return IFSCCodeModel.distinct('branch', filter);
+    const cacheKey = this.getDistinctBranchesForCacheKey(filter);
+    const cached = await cache.get(cacheKey);
+    if (cached) return cached;
+    const result = await IFSCCodeModel.distinct('branch', filter);
+    await cache.set(cacheKey, result, 60 * 60 * 24 * 7);
+    return result;
+  }
+
+  private getDistinctBranchesForCacheKey(filter: FilterQuery<IFSCCode>) {
+    const cacheKey = `distinctBranches_${JSON.stringify(filter)}`;
+    return cacheKey;
   }
 
   private escapeRegex(input: string) {
