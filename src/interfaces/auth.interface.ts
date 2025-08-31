@@ -20,6 +20,23 @@ export interface RequestWithUser extends Request {
   user: User;
 }
 
+export interface SendOTPRequest extends Request {
+  body: {
+    phone: string;
+  }
+}
+
+export interface CacheQRCode {
+  phone: string;
+}
+
+export interface VerifyOTPRequest extends Request {
+  body: {
+    phone: string;
+    otp: string;
+  }
+}
+
 export interface HandleMessageRequest extends RequestWithUser {
   body: {
       message: string,

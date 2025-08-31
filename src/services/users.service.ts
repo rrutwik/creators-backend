@@ -11,14 +11,20 @@ import { cache } from '@/cache';
 @Service()
 export class UserService {
   private authService = Container.get(AuthService);
-  public async findUserByEmail(email: string) {
-    const findUser: User = await UserModel.findOne({ email: email });
-    return findUser;
+
+  public async findUserByEmail(email: string): Promise<User> {
+    const findUser = await UserModel.findOne({ email: email });
+    return findUser.toJSON();
   }
 
   public async createUserFromGoogle(googleUser: Auth.TokenPayload): Promise<User> {
     const { email } = googleUser;
-    const user = await this.authService.signup({ email, password: randomUUID() });
+    const user = await this.authService.signupwithemail(email);
+    return user;
+  }
+
+  public async createUserFromPhone(phone: string): Promise<User> {
+    const user = await this.authService.signupwithphone(phone);
     return user;
   }
 
@@ -58,8 +64,8 @@ export class UserService {
 
     const userProfile = await UserProfileModel.findOne({ user_id: userId });
     if (userProfile) {
-      await cache.set(cacheKey, userProfile, 30 * 60 * 1000); // 30 minutes cache
+      await cache.set(cacheKey, userProfile.toJSON(), 30 * 60 * 1000); // 30 minutes cache
     }
-    return userProfile;
+    return userProfile.toJSON();
   }
 }

@@ -32,7 +32,7 @@ export class TelegramService {
         return `hash:${phone_number}`;
     }
 
-    public async generateMessageToBotQRCode(phone: string, expiresAt: number): Promise<{ qrCode: string }> {
+    public async generateMessageToBotQRCode(phone: string, expiresAt: number): Promise<{ qrCode: string, token: string }> {
         const token = crypto.createHash('sha256').update(phone).digest('hex');
         cache.set(this.getQRCodeCacheKey(token), JSON.stringify({
             phone,
@@ -40,7 +40,7 @@ export class TelegramService {
         }), expiresAt);
         const startLink = `https://t.me/${this.botUsername}?start=${token}`;
         const qrCode = await QRCode.toDataURL(startLink);
-        return { qrCode };
+        return { qrCode, token };
     }
 
     public getWebhookHandler() {

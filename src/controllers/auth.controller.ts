@@ -19,12 +19,16 @@ export class AuthController {
 
   public telegramWebhook = this.telegramService.getWebhookHandler();
 
-  public getOTP = async (req: SendOTPRequest, res: Response, next: NextFunction) => {
+  public generateQRCodeForLogin = async (req: SendOTPRequest, res: Response, next: NextFunction) => {
     try {
-      const userData: User = req.body;
-      const signUpUserData: User = await this.authService.signup(userData);
-      return res.status(201).json({ data: signUpUserData, message: 'signup' });
+      const { phone } = req.body;
+      const { success, error, expires_at, token, link } = await this.authService.generateQRCodeForLogin(phone);
+      if (success) {
+        return res.status(200).json({ success, data: { expires_at, link, token } });
+      }
+      return res.status(400).json({ error });
     } catch (error) {
+      logger.error(`Error sending OTP: ${error}`);
       next(error);
     }
   }
@@ -61,10 +65,12 @@ export class AuthController {
     try {
       const userData: User = req.user;
       await this.authService.logout(userData);
-      return res.status(200).json({ data: {
-        sessionToken: null,
-        refreshToken: null
-      }, message: 'logout' });
+      return res.status(200).json({
+        data: {
+          sessionToken: null,
+          refreshToken: null
+        }, message: 'logout'
+      });
     } catch (error) {
       next(error);
     }

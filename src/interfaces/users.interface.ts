@@ -1,7 +1,8 @@
 export interface User {
   _id?: string;
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
+  phone?: string;
 }
 
 export interface PasswordResetObject {
