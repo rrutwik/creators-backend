@@ -42,9 +42,7 @@ function getCacheClient() {
 }
 
 console.log({
-  OPENAI_KEY,
-  OPENAI_MODEL_NAME,
-  MAXIMUM_CHAT_BUFFER
+  OPENAI_MODEL_NAME
 })
 
 export class Agent {

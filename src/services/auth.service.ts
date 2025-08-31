@@ -12,23 +12,17 @@ import { UserProfileModel } from '@/models/user_profile.model';
 export class AuthService {
   public sessionService = Container.get(SessionService);
 
-  public async signup(user: User): Promise<User> {
-    const findUser: User = await UserModel.findOne({ email: user.email });
-    if (findUser) throw new HttpException(409, `This email ${user.email} already exists`);
-
-    const hashedPassword = await hash(user.password, 10);
-    const createUserData: User = await UserModel.create({ ...user, password: hashedPassword });
-    const userProfile: UserProfile = await UserProfileModel.create({ user_id: createUserData._id });
+  public async signupwithemail(email: string): Promise<User> {
+    const findUser: User = await UserModel.findOne({ email });
+    if (findUser) throw new HttpException(409, `This email ${email} already exists`);
+    const createUserData: User = await UserModel.create({ email });
+    await UserProfileModel.create({ user_id: createUserData._id });
     return createUserData;
   }
 
-  public async login(user: User, checkPassword: boolean = true): Promise<{ sessionToken: string; refreshToken: string; user: User }> {
+  public async login(user: User): Promise<{ sessionToken: string; refreshToken: string; user: User }> {
     const findUser: User = await UserModel.findOne({ email: user.email });
     if (!findUser) throw new HttpException(409, `This email ${user.email} was not found`);
-    if (!checkPassword) {
-      const isPasswordMatching: boolean = await compare(user.password, findUser.password);
-      if (!isPasswordMatching) throw new HttpException(409, 'Password is not matching');
-    }
     const createdSession: Session = await this.sessionService.createSessionForUserId({ _id: findUser._id });
     return { sessionToken: createdSession.session_token, refreshToken: createdSession.refresh_token, user: findUser };
   }
