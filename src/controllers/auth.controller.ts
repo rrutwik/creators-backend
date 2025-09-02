@@ -3,12 +3,13 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthService } from '@services/auth.service';
 import { Container } from 'typedi';
 import { TokenExpiredError } from 'jsonwebtoken';
-import { GoogleLoginBody, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
+import { GoogleLoginBodyWithLanguage, GoogleLoginRequest, RefreshTokenRequest, RequestWithUser } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
 import { getGoogleUserInfo, getGoogleUserInfoFromCode } from '@/external/googleapis';
 import { UserService } from '@/services/users.service';
 import { UserProfileModel } from '@/models/user_profile.model';
 import { logger } from '@/utils/logger';
+import { Auth } from 'googleapis';
 
 export class AuthController {
   public authService = Container.get(AuthService);
@@ -17,7 +18,7 @@ export class AuthController {
   public signUp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userData: User = req.body;
-      const signUpUserData: User = await this.authService.signup(userData);
+      const signUpUserData: User = await this.authService.signupwithemail(userData.email);
       return res.status(201).json({ data: signUpUserData, message: 'signup' });
     } catch (error) {
       next(error);
@@ -84,8 +85,9 @@ export class AuthController {
 
   public googleLogin = async (req: GoogleLoginRequest, res: Response, next: NextFunction) => {
     try {
-      const body: GoogleLoginBody = req.body;
+      const body: GoogleLoginBodyWithLanguage = req.body;
       let googleUser: Auth.TokenPayload;
+      const language = body.language || 'en';
       logger.debug(`Google login request: ${JSON.stringify(body)}`);
       if (body.code) {
         googleUser = await getGoogleUserInfoFromCode(body.code, body.redirect_uri);
@@ -106,7 +108,8 @@ export class AuthController {
         $set: {
           first_name: googleUser.given_name,
           last_name: googleUser.family_name,
-          avatar: avatar
+          avatar: avatar,
+          language: language
         }
       }, {
         new: true

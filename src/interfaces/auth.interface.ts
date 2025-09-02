@@ -43,6 +43,10 @@ export interface GoogleLoginBody {
   redirect_uri?: string;
 }
 
+export type GoogleLoginBodyWithLanguage = GoogleLoginBody & {
+  language?: string;
+}
+
 export interface GoogleLoginRequest extends Request {
-  body: GoogleLoginBody
+  body: GoogleLoginBodyWithLanguage;
 }
