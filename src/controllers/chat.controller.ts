@@ -20,13 +20,10 @@ export class ChatController {
 
   private agent = new Agent();
 
-  private async updateChatSessionName(chatSession: ChatSession, message: string): Promise<void> {
-    const chatBot = await ChatBotModel.findById(chatSession.chatbot_id);
+  private async updateChatSessionName(chatBotId: string, message: string): Promise<string> {
+    const chatBot = await ChatBotModel.findById(chatBotId);
     const name = await this.agent.suggestChatSessionNameFromFirstMessage(message, chatBot);
-    await ChatSessionModel.updateOne(
-      { _id: chatSession._id },
-      { name }
-    );
+    return name;
   }
 
   public handleMessageOfUser = async (req: HandleMessageRequest, res: Response, next: NextFunction) => {
@@ -39,8 +36,8 @@ export class ChatController {
       if (chatSessionUUID) {
         chatSession = await this.chatSessionService.getSessionByUUID(chatSessionUUID, user._id);
       } else {
-        chatSession = await this.chatSessionService.createChatSession(user, "...", chatBotId);
-        await this.updateChatSessionName(chatSession, message);
+        const name = await this.updateChatSessionName(chatBotId, message);
+        chatSession = await this.chatSessionService.createChatSession(user, name, chatBotId);
       }
       if (!chatSession) {
         logger.error(`error: chat session not found`);
