@@ -101,12 +101,13 @@ export class Agent {
 
   public async suggestChatSessionNameFromFirstMessage(message: string, bot: ChatBot): Promise<string> {
     const botName = bot.name;
+    const religion = bot.religion;
     const botDescription = bot.description;
     const prompt = await ChatPromptTemplate.fromMessages([
-      SystemMessagePromptTemplate.fromTemplate(`You are given a message from a user and a bot name and description he is using. Suggest a name for this chat session based on the message. Only suggest a name, do not add any additional text.`),
-      HumanMessagePromptTemplate.fromTemplate("Message: {message}\nBot Name: {botName}\nBot Description: {botDescription}")
+      SystemMessagePromptTemplate.fromTemplate(`You are given a message from a user and a bot name and description and religion of the bot. Suggest a name for this chat session based on the message. Only suggest a name, do not add any additional text.`),
+      HumanMessagePromptTemplate.fromTemplate("Message: {message}\nBot Name: {botName}\nBot Religion: {religion}\nBot Description: {botDescription}")
     ]);
-    const output = await this.chatGPTModel.invoke(await prompt.format({ message, botName, botDescription }));
+    const output = await this.chatGPTModel.invoke(await prompt.format({ message, botName, religion, botDescription }));
     return output.content as string;
   }
 
