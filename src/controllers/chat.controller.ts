@@ -40,7 +40,7 @@ export class ChatController {
         chatSession = await this.chatSessionService.getSessionByUUID(chatSessionUUID, user._id);
       } else {
         chatSession = await this.chatSessionService.createChatSession(user, "...", chatBotId);
-        this.updateChatSessionName(chatSession, message);
+        await this.updateChatSessionName(chatSession, message);
       }
       if (!chatSession) {
         logger.error(`error: chat session not found`);
