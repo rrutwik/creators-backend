@@ -207,7 +207,7 @@ export class Agent {
     let currentContent = "";
     const throttleUpdate = throttle(updateMessageInDb, 500);
     for await (const chunkAIMessage of streamOutput) {
-      // logger.debug(`Agent response chunk: ${JSON.stringify(chunkAIMessage, null, 4)}`);
+      logger.debug(`Agent response chunk: ${JSON.stringify(chunkAIMessage, null, 4)}`);
       if (chunkAIMessage.data.chunk) {
         if (aiMessage) {
           aiMessage = concat(aiMessage, chunkAIMessage.data.chunk);
