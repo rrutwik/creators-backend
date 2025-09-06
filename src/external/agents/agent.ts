@@ -10,6 +10,8 @@ import { RedisCache } from "@langchain/community/caches/ioredis";
 import { sha256 } from "@langchain/core/utils/hash/sha256";
 import { ChatBot } from "@/interfaces/chatbot.interface";
 import { throttle } from 'lodash';
+import { concat } from "@langchain/core/utils/stream";
+
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
 const languageMapping = {
@@ -111,85 +113,124 @@ export class Agent {
     return output.content as string;
   }
 
-  public async sendMessageToAgent(message: string, userLanguage: string, _chatSession: ChatSession, promptString: string, userUpdatedChatSession: (chatSession: ChatSession) => void): Promise<void> {
-    const chatSession = await ChatSessionModel.findOneAndUpdate(
-      { _id: _chatSession._id },
+  public async sendMessageToAgent(
+    message: string,
+    userLanguage: string,
+    _chatSession: ChatSession,
+    promptString: string,
+    userUpdatedChatSession: (chatSession: ChatSession) => void
+  ): Promise<void> {
+    try {
+      const chatSession = await this.addUserMessage(_chatSession, message);
+      userUpdatedChatSession(chatSession);
+
+      const formattedPrompt = await this.buildPrompt(_chatSession, message, promptString, userLanguage);
+      const { aiMessage, messageId } = await this.streamAgentResponse(_chatSession, formattedPrompt);
+      await this.updateAgentMessage(_chatSession, messageId, aiMessage);
+    } catch (error) {
+      logger.error(
+        `Error while adding message to session: ${_chatSession._id} ${error} ${error.stack}`
+      );
+    }
+  }
+
+  private async addUserMessage(chatSession: ChatSession, message: string): Promise<ChatSession> {
+    return await ChatSessionModel.findOneAndUpdate(
+      { _id: chatSession._id },
       {
         can_message: false,
         $push: {
-          messages: {
-            text: message,
-            role: MessageRole.USER
-          }
+          messages: { text: message, role: MessageRole.USER }
         }
       },
       { new: true }
     );
-    userUpdatedChatSession(chatSession);
-    try {
-      const pastMessages = this.getMessages(_chatSession);
-      const prompt = ChatPromptTemplate.fromMessages([
-        SystemMessagePromptTemplate.fromTemplate(promptString),
-        SystemMessagePromptTemplate.fromTemplate(`You are given chat history for reference with new user message. Reply in ${languageMapping[userLanguage]} language while keeping your tone gentle and compassionate.`),
-        new MessagesPlaceholder("history"),
-        HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
-      ]);
-      const formattedPrompt = await prompt.format({ history: pastMessages, inputMessage: message });
-      logger.debug(`Prompt: ${formattedPrompt}`);
-      const readStream = await this.chatGPTModel.stream(formattedPrompt)
-      const chatSession = await ChatSessionModel.findOneAndUpdate(
-        { _id: _chatSession._id },
-        {
-          can_message: false,
-          $push: {
-            messages: {
-              text: "",
-              role: MessageRole.ASSISTANT
-            }
-          }
-        },
-        { new: true }
-      );
-      const messageId = chatSession.messages[chatSession.messages.length - 1]._id;
-      let content = "";
-
-      // Create message updater with database update logic
-      const updateMessageInDb = async (newContent: string) => {
-        await ChatSessionModel.findOneAndUpdate(
-          { _id: _chatSession._id },
-          { $set: { "messages.$[message].text": newContent, updatedAt: new Date() } },
-          { arrayFilters: [{ "message._id": messageId }] }
-        );
-      };
-
-      const throttleUpdate = throttle(updateMessageInDb, 500);
-
-      for await (const chunk of readStream) {
-        content += chunk.content;
-        throttleUpdate(content);
-      }
-
-      logger.debug(`Agent response: ${JSON.stringify(content, null, 4)}`);
-      const agentMessage = content;
-      await ChatSessionModel.findOneAndUpdate(
-        { _id: _chatSession._id },
-        {
-          can_message: true,
-          $set: {
-            "messages.$[message].text": agentMessage
-          }
-        },
-        {
-          arrayFilters: [
-            {
-              "message._id": messageId
-            }
-          ]
-        }
-      );
-    } catch (error) {
-      // if error is of chatgpt 
-      logger.error(`Error while adding message to session: ${_chatSession._id} ${error} ${error.stack}`);
-    }
   }
+
+  private async buildPrompt(
+    chatSession: ChatSession,
+    message: string,
+    promptString: string,
+    userLanguage: string
+  ): Promise<string> {
+    const pastMessages = this.getMessages(chatSession);
+
+    const prompt = ChatPromptTemplate.fromMessages([
+      SystemMessagePromptTemplate.fromTemplate(promptString),
+      SystemMessagePromptTemplate.fromTemplate(
+        `You are given chat history for reference with new user message. Reply in ${languageMapping[userLanguage]} language while keeping your tone gentle and compassionate.`
+      ),
+      new MessagesPlaceholder("history"),
+      HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
+    ]);
+
+    return await prompt.format({ history: pastMessages, inputMessage: message });
+  }
+
+  private async streamAgentResponse(chatSession: ChatSession, prompt: string): Promise<{
+    aiMessage: AIMessage;
+    messageId: string
+  }> {
+    logger.debug(`Prompt: ${prompt}`);
+
+    const streamOutput = await this.chatGPTModel.stream(prompt, {
+      response_format: {
+        type: 'text'
+      },
+      stream_options: {
+        include_usage: true,
+      }
+    });
+
+    const updatedSession = await ChatSessionModel.findOneAndUpdate(
+      { _id: chatSession._id },
+      {
+        can_message: false,
+        $push: { messages: { text: "", role: MessageRole.ASSISTANT } }
+      },
+      { new: true }
+    );
+
+    const messageId = updatedSession.messages[updatedSession.messages.length - 1]._id;
+
+    let aiMessage: AIMessage = null;
+
+    const updateMessageInDb = async (newContent: string) => {
+      await ChatSessionModel.findOneAndUpdate(
+        { _id: chatSession._id },
+        { $set: { "messages.$[message].text": newContent, updatedAt: new Date() } },
+        { arrayFilters: [{ "message._id": messageId }] }
+      );
+    };
+    let currentContent = "";
+    const throttleUpdate = throttle(updateMessageInDb, 500);
+    for await (const chunkAIMessage of streamOutput) {
+      if (aiMessage) {
+        aiMessage = concat(aiMessage, chunkAIMessage);
+      } else {
+        aiMessage = chunkAIMessage;
+      }
+      currentContent = aiMessage.content as string;
+      throttleUpdate(currentContent);
+    }
+
+    logger.debug(`Agent response: ${JSON.stringify(currentContent, null, 4)}`);
+    return {
+      aiMessage,
+      messageId
+    };
+  }
+
+  private async updateAgentMessage(chatSession: ChatSession, messageId: string, agentMessage: AIMessage): Promise<void> {
+    const usage_metadata = agentMessage.usage_metadata;
+    await ChatSessionModel.findOneAndUpdate(
+      { _id: chatSession._id },
+      {
+        can_message: true,
+        $set: { "messages.$[message].text": agentMessage.content, "messages.$[message].usage_metadata": usage_metadata }
+      },
+      { arrayFilters: [{ "message._id": messageId }] }
+    );
+  }
+
 }

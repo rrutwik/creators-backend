@@ -27,6 +27,9 @@ const MessageSchema = new Schema({
         enum: Object.values(MessageRole),
         required: true
     },
+    usage_metadata: {
+        type: Object
+    },
     createdAt: {
         type: Date,
         default: Date.now
