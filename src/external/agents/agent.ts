@@ -173,13 +173,14 @@ export class Agent {
   }> {
     logger.debug(`Prompt: ${prompt}`);
 
-    const streamOutput = await this.chatGPTModel.stream(prompt, {
+    const streamOutput = this.chatGPTModel.streamEvents(prompt, {
       response_format: {
         type: 'text'
       },
       stream_options: {
         include_usage: true,
-      }
+      },
+      version: 'v2'
     });
 
     const updatedSession = await ChatSessionModel.findOneAndUpdate(
@@ -206,9 +207,9 @@ export class Agent {
     const throttleUpdate = throttle(updateMessageInDb, 500);
     for await (const chunkAIMessage of streamOutput) {
       if (aiMessage) {
-        aiMessage = concat(aiMessage, chunkAIMessage);
+        aiMessage = concat(aiMessage, chunkAIMessage.data.chunk);
       } else {
-        aiMessage = chunkAIMessage;
+        aiMessage = chunkAIMessage.data.chunk;
       }
       currentContent = aiMessage.content as string;
       throttleUpdate(currentContent);
