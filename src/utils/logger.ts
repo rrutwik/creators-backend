@@ -70,7 +70,7 @@ const logger: Logger = winston.createLogger({
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
 if (NODE_ENV === 'production') {
   logger.add(new winston.transports.Console({
-    level: "debug",
+    level: "error",
     format: winston.format.combine(winston.format.splat(), winston.format.colorize())
   }));
 }

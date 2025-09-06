@@ -52,6 +52,7 @@ export class Agent {
     apiKey: OPENAI_KEY,
     temperature: 0,
     model: modelName,
+    streaming: true,
     cache: getCacheClient(),
     callbacks: [{
       handleLLMEnd(output, runId, parentRunId, tags, metadata) {
@@ -206,13 +207,16 @@ export class Agent {
     let currentContent = "";
     const throttleUpdate = throttle(updateMessageInDb, 500);
     for await (const chunkAIMessage of streamOutput) {
-      if (aiMessage) {
-        aiMessage = concat(aiMessage, chunkAIMessage.data.chunk);
-      } else {
-        aiMessage = chunkAIMessage.data.chunk;
+      // logger.debug(`Agent response chunk: ${JSON.stringify(chunkAIMessage, null, 4)}`);
+      if (chunkAIMessage.data.chunk) {
+        if (aiMessage) {
+          aiMessage = concat(aiMessage, chunkAIMessage.data.chunk);
+        } else {
+          aiMessage = chunkAIMessage.data.chunk;
+        }
+        currentContent = aiMessage.content as string;
+        throttleUpdate(currentContent);
       }
-      currentContent = aiMessage.content as string;
-      throttleUpdate(currentContent);
     }
 
     logger.debug(`Agent response: ${JSON.stringify(currentContent, null, 4)}`);
