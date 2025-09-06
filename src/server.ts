@@ -7,6 +7,7 @@ import { ChatRoute } from './routes/chat.route';
 import { IndexRoute } from './routes/index.route';
 import { ChatBotRoute } from './routes/chatbot.route';
 import { IFSCRoute } from './routes/ifsc.route';
+import { AdminRoute } from './routes/admin.route';
 
 process.on('uncaughtException', (err) => {
   console.error('There was an uncaught error', err);
@@ -28,6 +29,7 @@ const app = new App([
   new AuthRoute(),
   new WebHookRoute(),
   new IFSCRoute(),
+  new AdminRoute(),
 ]);
 
 process.on('SIGTERM', () => {

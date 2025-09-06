@@ -83,6 +83,15 @@ export class ChatBotController {
     }
   };
 
+  public getAllChatBotsAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const chatBots = await ChatBotModel.find({});
+      return res.status(200).json({ records: chatBots, total: chatBots.length, message: 'ChatBots retrieved' });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Delete a ChatBot by ID
   public deleteChatBot = async (req: Request, res: Response, next: NextFunction) => {
     try {

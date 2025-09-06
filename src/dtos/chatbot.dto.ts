@@ -1,4 +1,4 @@
-import { IsString, IsOptional, Length } from 'class-validator';
+import { IsString, IsOptional, Length, MIN_LENGTH, MinLength } from 'class-validator';
 
 export class CreateChatBotDto {
   @IsString()
@@ -11,13 +11,11 @@ export class CreateChatBotDto {
 }
 
 export class UpdateChatBotDto {
-  @IsOptional()
   @IsString()
-  @Length(1, 255)
+  @MinLength(1)
   public name?: string;
 
-  @IsOptional()
   @IsString()
-  @Length(1, 2000)
+  @MinLength(1)
   public prompt?: string;
 }

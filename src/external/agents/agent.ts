@@ -153,7 +153,7 @@ export class Agent {
     message: string,
     promptString: string,
     userLanguage: string
-  ): Promise<string> {
+  ): Promise<BaseMessage[]> {
     const pastMessages = this.getMessages(chatSession);
 
     const prompt = ChatPromptTemplate.fromMessages([
@@ -165,10 +165,13 @@ export class Agent {
       HumanMessagePromptTemplate.fromTemplate("{inputMessage}")
     ]);
 
-    return await prompt.format({ history: pastMessages, inputMessage: message });
+    return prompt.formatMessages({
+      history: pastMessages,
+      inputMessage: message
+    });
   }
 
-  private async streamAgentResponse(chatSession: ChatSession, prompt: string): Promise<{
+  private async streamAgentResponse(chatSession: ChatSession, prompt: BaseMessage[]): Promise<{
     aiMessage: AIMessage;
     messageId: string
   }> {

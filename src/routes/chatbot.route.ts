@@ -15,11 +15,6 @@ export class ChatBotRoute implements Routes {
   }
 
   private initializeRoutes() {
-    this.router.post(
-      `${this.path}`,
-      ValidationMiddleware(CreateChatBotDto),
-      this.chatBotController.createChatBot
-    );
     this.router.get(`${this.path}`, AuthMiddleware, this.chatBotController.getChatBots);
     this.router.get(`${this.path}:id`, AuthMiddleware, this.chatBotController.getChatBotById);
   }
