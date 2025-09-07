@@ -70,19 +70,6 @@ export class App {
     this.app.use(morgan(LOG_FORMAT, { stream: stream }));
     const origins = ORIGINS ? ORIGINS.split(',').map((origin) => origin.trim()) : [];
     this.app.set("trust proxy", true);
-    this.app.use((req, res, next) => {
-      // Prefer Cloudflare header if present
-      const ip =
-        (req.headers["cf-connecting-ip"] as string) ||
-        req.ip;
-      // print url and ip
-      const origin = req.get("origin") || req.get("referer") || "unknown";
-      const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-      logger.info(`Client IP: ${ip}`);
-      logger.info(`Client URL: ${fullUrl}`);
-      logger.info(`Client Origin: ${origin}`);
-      next();
-    });
     this.app.use(cors({ origin: origins, credentials: CREDENTIALS }));
     this.app.use(hpp());
     this.app.use(helmet());
