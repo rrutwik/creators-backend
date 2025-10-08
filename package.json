@@ -16,9 +16,9 @@
     "deploy:dev": "pm2 start ecosystem.config.js --only dev"
   },
   "dependencies": {
-    "@langchain/community": "0.3.55",
-    "@langchain/openai": "0.6.11",
-    "axios": "1.7.9",
+    "@langchain/community": "0.3.57",
+    "@langchain/openai": "0.6.14",
+    "axios": "1.12.2",
     "bcrypt": "5.1.1",
     "chatgpt": "5.2.5",
     "class-transformer": "0.5.1",
@@ -34,7 +34,7 @@
     "hpp": "0.2.3",
     "ioredis": "5.7.0",
     "jsonwebtoken": "9.0.2",
-    "langchain": "0.3.33",
+    "langchain": "0.3.35",
     "lodash": "^4.17.21",
     "lru-cache": "^11.1.0",
     "moment-timezone": "0.6.0",
