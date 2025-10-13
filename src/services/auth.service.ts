@@ -20,11 +20,19 @@ export class AuthService {
     return createUserData;
   }
 
+  public async signupwithphone(phone: string): Promise<User> {
+    const findUser: User = await UserModel.findOne({ phone });
+    if (findUser) throw new HttpException(409, `This phone ${phone} already exists`);
+    const createUserData: User = await UserModel.create({ phone });
+    await UserProfileModel.create({ user_id: createUserData._id });
+    return createUserData;
+  }
+
   public async login(user: User): Promise<{ sessionToken: string; refreshToken: string; user: User }> {
-    const findUser: User = await UserModel.findOne({ email: user.email });
+    const findUser = await UserModel.findOne({ email: user.email });
     if (!findUser) throw new HttpException(409, `This email ${user.email} was not found`);
     const createdSession: Session = await this.sessionService.createSessionForUserId({ _id: findUser._id });
-    return { sessionToken: createdSession.session_token, refreshToken: createdSession.refresh_token, user: findUser };
+    return { sessionToken: createdSession.session_token, refreshToken: createdSession.refresh_token, user: findUser.toJSON() };
   }
 
   public async refreshToken(refreshToken: string): Promise<{ sessionToken: string, refreshToken: string }> {

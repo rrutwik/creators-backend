@@ -75,7 +75,8 @@ export class AuthController {
       return res.status(200).json({
         data: {
           ...userProfile,
-          email: userData.email
+          email: userData.email,
+          _id: userData._id,
         }, message: 'user_info'
       });
     } catch (error) {
