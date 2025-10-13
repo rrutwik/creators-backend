@@ -119,6 +119,10 @@ export class ChessService {
         throw new HttpException(404, 'Chess game not found');
       }
 
+      if (game.game_state.status !== 'active') {
+        throw new HttpException(400, 'Game is not active');
+      }
+
       // Verify the current player is part of this game
       const isPlayerWhite = game.player_white?.toString() === currentPlayerId;
       const isPlayerBlack = game.player_black?.toString() === currentPlayerId;
