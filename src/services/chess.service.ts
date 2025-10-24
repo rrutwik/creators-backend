@@ -3,12 +3,28 @@ import { ChessGame } from '@/interfaces/chessgame.interface';
 import { ChessGameModel } from '@/models/chess_games.model';
 import { HttpException } from '@/exceptions/HttpException';
 import { logger } from '@/utils/logger';
+import mongoose from 'mongoose';
+import { TextEncoder } from 'util';
 
 @Service()
 export class ChessService {
+
+  private async createUniqueGameId(creatorId: string): Promise<string> {
+    const data = `${creatorId}-${Date.now()}-${Math.random()}`;
+    const bytes = new TextEncoder().encode(data);
+
+    const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+    return hashHex.slice(0, 12).toUpperCase();
+  }
+
   public async createGame(playerId: string, playerColor: 'white' | 'black'): Promise<ChessGame> {
     try {
       const game = await ChessGameModel.create({
+        game_id: await this.createUniqueGameId(playerId),
         player_white: playerColor === 'white' ? playerId : null,
         player_black: playerColor === 'black' ? playerId : null,
         game_state: {
@@ -97,13 +113,14 @@ export class ChessService {
 
   public async getActiveGamesForPlayer(playerId: string): Promise<ChessGame[]> {
     try {
+      // add user first name
       const games = await ChessGameModel.find({
         $or: [
           { player_white: playerId },
           { player_black: playerId }
         ],
         'game_state.status': { $in: ['waiting_for_opponent', 'active'] }
-      }).sort({ updated_at: -1 });
+      }).populate('player_white', 'first_name last_name').populate('player_black', 'first_name last_name').sort({ updated_at: -1 });
 
       return games.map(game => game.toJSON());
     } catch (error) {

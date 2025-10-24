@@ -47,10 +47,7 @@ const ChessGameSchema: Schema = new Schema({
     type: String,
     required: true,
     unique: true,
-    index: true,
-    default: () => {
-      return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    }
+    index: true
   },
   player_white: {
     type: Schema.Types.ObjectId,
