@@ -120,7 +120,7 @@ export class ChessService {
           { player_black: playerId }
         ],
         'game_state.status': { $in: ['waiting_for_opponent', 'active'] }
-      }).populate('player_white', 'first_name last_name').populate('player_black', 'first_name last_name').sort({ updated_at: -1 });
+      }).sort({ updated_at: -1 });
 
       return games.map(game => game.toJSON());
     } catch (error) {
