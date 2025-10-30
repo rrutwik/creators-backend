@@ -1,5 +1,5 @@
 import Container, { Service } from 'typedi';
-import { ChessGame } from '@/interfaces/chessgame.interface';
+import { ChessGame, GameState } from '@/interfaces/chessgame.interface';
 import { ChessGameModel } from '@/models/chess_games.model';
 import { HttpException } from '@/exceptions/HttpException';
 import { logger } from '@/utils/logger';
@@ -129,13 +129,13 @@ export class ChessService {
     }
   }
 
-  public async updateGameState(gameId: string, gameState: any, currentPlayerId: string): Promise<ChessGame> {
+  public async updateGameState(gameId: string, version: number, gameState: GameState, currentPlayerId: string): Promise<ChessGame> {
     try {
-      const game = await ChessGameModel.findOne({ game_id: gameId });
-      if (!game) {
-        throw new HttpException(404, 'Chess game not found');
+      const gameModel = await ChessGameModel.findOne({ game_id: gameId, version });
+      if (!gameModel) {
+        throw new HttpException(404, 'Chess game not found or version mismatch');
       }
-
+      const game = gameModel.toJSON();
       if (game.game_state.status !== 'active') {
         throw new HttpException(400, 'Game is not active');
       }
@@ -143,7 +143,6 @@ export class ChessService {
       // Verify the current player is part of this game
       const isPlayerWhite = game.player_white?.toString() === currentPlayerId;
       const isPlayerBlack = game.player_black?.toString() === currentPlayerId;
-
       if (!isPlayerWhite && !isPlayerBlack) {
         throw new HttpException(403, 'You are not a player in this game');
       }
@@ -151,18 +150,25 @@ export class ChessService {
       // Verify it's the player's turn
       const expectedTurn = game.game_state.turn;
       const playerColor = isPlayerWhite ? 'white' : 'black';
-
       if (expectedTurn !== playerColor) {
         throw new HttpException(400, `It's not your turn. Current turn: ${expectedTurn}`);
       }
+      // Perform atomic update with version increment
+      const updatedGame = await ChessGameModel.findOneAndUpdate(
+        { game_id: gameId, version }, // must match old version
+        {
+          $set: { game_state: { ...game.game_state, ...gameState } },
+          $inc: { version: 1 }, // increment version
+        },
+        { new: true }
+      );
 
-      // Update the game state
-      game.game_state = { ...game.game_state, ...gameState };
-      game.markModified('game_state');
+      if (!updatedGame) {
+        // If null, another update beat us — version conflict
+        throw new HttpException(409, 'Version conflict — please refresh game state');
+      }
 
-      const updatedGame = await game.save();
       logger.info(`Game ${gameId} state updated by ${currentPlayerId}`);
-
       return updatedGame.toJSON();
     } catch (error) {
       logger.error('Error updating chess game state:', error);

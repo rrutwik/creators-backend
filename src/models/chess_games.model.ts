@@ -61,6 +61,11 @@ const ChessGameSchema: Schema = new Schema({
     index: true,
     ref: 'user'
   },
+  version: {
+    type: Number,
+    required: true,
+    default: 0
+  },
   game_state: {
     type: GameStateSchema,
     required: true,
@@ -73,7 +78,8 @@ const ChessGameSchema: Schema = new Schema({
   }
 }, {
   timestamps: true,
-  collection: 'chess_games'
+  collection: 'chess_games',
+  versionKey: 'version'
 });
 
 // Add index for finding active games for a player

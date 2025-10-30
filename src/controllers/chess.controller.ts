@@ -3,6 +3,7 @@ import { RequestWithUser } from '@/interfaces/auth.interface';
 import { ChessService } from '@/services/chess.service';
 import { Container } from 'typedi';
 import { logger } from '@/utils/logger';
+import { GameState } from '@/interfaces/chessgame.interface';
 
 export class ChessController {
   private chessService = Container.get(ChessService);
@@ -115,7 +116,7 @@ export class ChessController {
     try {
       const user: any = req.user;
       const { gameId } = req.params;
-      const gameState = req.body;
+      const { game_state: gameState, version } = req.body as { game_state: GameState; version: number };
 
       if (!user) {
         return res.status(401).json({ message: 'User not authenticated' });
@@ -129,7 +130,7 @@ export class ChessController {
         return res.status(400).json({ message: 'Game state is required' });
       }
 
-      const updatedGame = await this.chessService.updateGameState(gameId, gameState, user._id.toString());
+      const updatedGame = await this.chessService.updateGameState(gameId, version, gameState, user._id.toString());
 
       return res.status(200).json({
         message: 'Game state updated successfully',

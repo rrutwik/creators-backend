@@ -19,16 +19,3 @@ export interface PlayingCard {
   value: string;
   color: 'red' | 'black';
 }
-
-export interface GameState {
-  board: (Piece | null)[][];
-  deck: PlayingCard[];
-  discardPile: PlayingCard[];
-  currentCard: PlayingCard | null;
-  currentPlayer: PieceColor;
-  selectedPiece: Position | null;
-  validMoves: Position[];
-  gameOver: boolean;
-  winner: PieceColor | null;
-  moveHistory: string[];
-}
