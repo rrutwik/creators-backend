@@ -38,5 +38,14 @@ const UserSchema: Schema = new Schema({
   },
 });
 
+UserSchema.set("toJSON", {
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    delete ret.password_reset_object;
+    return ret;
+  }
+});
+
 export const UserModel = model<User & Document>('user', UserSchema);
 UserModel.syncIndexes();
