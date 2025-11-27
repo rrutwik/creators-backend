@@ -14,6 +14,9 @@ export class UserService {
 
   public async findUserByEmail(email: string): Promise<User> {
     const findUser = await UserModel.findOne({ email: email });
+    if (!findUser) {
+      return null;
+    }
     return findUser.toJSON();
   }
 
