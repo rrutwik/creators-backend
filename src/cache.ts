@@ -47,7 +47,7 @@ class HybridCache {
     }
 
     logger.debug(`Redis Cache miss for key: ${key}`);
-  
+
     return undefined;
   }
 

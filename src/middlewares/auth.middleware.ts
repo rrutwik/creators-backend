@@ -5,6 +5,7 @@ import { HttpException } from '@exceptions/HttpException';
 import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
 import { logger } from '@/utils/logger';
 import { UserService } from '@/services/users.service';
+import { SessionDBService } from '@/dbservice/session';
 
 const getAuthorization = (req: RequestWithUser) => {
   const cookie = req.cookies['Authorization'];
@@ -18,27 +19,32 @@ const getAuthorization = (req: RequestWithUser) => {
 
 export const AuthMiddleware = async (req: RequestWithUser, res: Response, next: NextFunction) => {
   const userService = new UserService();
+  const sessionDBService = new SessionDBService();
+
   try {
-    const Authorization = getAuthorization(req);
+    const token = getAuthorization(req);
 
-    if (Authorization) {
-      // const session = await sessionDBService.getSessionBySessionToken(Authorization);
-      // if (session) {
-      const { _id } = (verify(Authorization, SECRET_KEY)) as DataStoredInToken;
+    if (token) {
+      const session = await sessionDBService.getSessionBySessionToken(token);
+      if (session) {
+        const { _id } = (verify(token, SECRET_KEY)) as DataStoredInToken;
 
-      const findUser = await userService.getUserFromID(_id);
+        const findUser = await userService.getUserFromID(_id);
 
-      if (findUser) {
-        req.user = findUser;
-        return next();
+        if (findUser) {
+          req.user = findUser;
+          return next();
+        } else {
+          logger.error('User not found for session token: ' + token + ' and user id: ' + _id);
+          return next(new HttpException(401, 'Wrong authentication token'));
+        }
       } else {
+        logger.error('Session not found for session token: ' + token);
         return next(new HttpException(401, 'Wrong authentication token'));
       }
-      // } else {
-      //   next(new HttpException(401, 'Wrong authentication token'));
-      // }
     } else {
-      return next(new HttpException(401, 'Authentication token missing'));
+      logger.error('Session token not found');
+      return next(new HttpException(401, 'Wrong authentication token'));
     }
   } catch (error) {
     logger.info(`Error in auth middleware: ${error}`);

@@ -117,7 +117,7 @@ export class AuthController {
       })
       await this.userService.clearUserProfileCache(user._id);
       const updatedUserProfile = await this.userService.getUserProfile(user._id);
-      const { sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);  
+      const { sessionToken, refreshToken, user: loggedInUser } = await this.authService.login(user);
       user = {
         ...updatedUserProfile,
         ...loggedInUser,

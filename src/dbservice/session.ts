@@ -1,3 +1,4 @@
+import { cache } from "@/cache";
 import { DatabaseException } from "@/exceptions/DependencyException";
 import { Session } from "@/interfaces/session.interface";
 import { SessionModel } from "@/models/session.model";
@@ -14,22 +15,40 @@ export class SessionDBService {
 
     public async getSessionBySessionToken(sessionToken: string): Promise<Session> {
         try {
-            return await SessionModel.findOne({ session_token: sessionToken });
+            const cacheKey = 'session_cache_' + sessionToken;
+            const cachedSession: string | null = await cache.get(cacheKey);
+            if (cachedSession) {
+                return JSON.parse(cachedSession);
+            }
+            const session = await SessionModel.findOne({ session_token: sessionToken });
+            if (session) {
+                await cache.set(cacheKey, JSON.stringify(session), 60 * 60 * 1000);
+            }
+            return session;
         } catch (error) {
             const errorMessage = `Error while finding user by session token: ${sessionToken}`;
             logger.error(errorMessage);
-            throw new DatabaseException(error);
+            return null;
         }
     }
 
     public async getSessionByRefreshToken(refreshToken: string): Promise<Session> {
-      try {
-          return await SessionModel.findOne({ refresh_token: refreshToken });
-      } catch (error) {
-          const errorMessage = `Error while finding user by refresh token: ${refreshToken}`;
-          logger.error(errorMessage);
-          throw new DatabaseException(error);
-      }
+        try {
+            const cacheKey = 'session_cache_' + refreshToken;
+            const cachedSession: string | null = await cache.get(cacheKey);
+            if (cachedSession) {
+                return JSON.parse(cachedSession);
+            }
+            const session = await SessionModel.findOne({ refresh_token: refreshToken });
+            if (session) {
+                await cache.set(cacheKey, JSON.stringify(session));
+            }
+            return session;
+        } catch (error) {
+            const errorMessage = `Error while finding user by refresh token: ${refreshToken}`;
+            logger.error(errorMessage);
+            throw new DatabaseException(error);
+        }
     }
 
     public async deleteAllSessionForUserId(user_id: string): Promise<void> {
