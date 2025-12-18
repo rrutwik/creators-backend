@@ -47,11 +47,12 @@
     "typedi": "0.10.0",
     "uuid": "9.0.1",
     "winston": "3.8.1",
-    "winston-daily-rotate-file": "4.7.1"
-  },
-  "devDependencies": {
+    "winston-daily-rotate-file": "4.7.1",
     "@swc/cli": "0.1.57",
     "@swc/core": "1.2.220",
+    "pm2": "6.0.8"
+  },
+  "devDependencies": {
     "@types/bcrypt": "5.0.0",
     "@types/compression": "1.7.2",
     "@types/cookie-parser": "1.4.3",
@@ -78,7 +79,6 @@
     "lint-staged": "13.0.3",
     "node-config": "0.0.2",
     "nodemon": "2.0.19",
-    "pm2": "6.0.8",
     "prettier": "2.7.1",
     "supertest": "6.2.4",
     "ts-jest": "28.0.7",
