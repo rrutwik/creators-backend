@@ -6,12 +6,12 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
 import { OPENAI_KEY, OPENAI_MODEL_NAME, MAXIMUM_CHAT_BUFFER } from "@/config";
 import Redis from "ioredis";
-import { RedisCache } from "@langchain/community/caches/ioredis";
-import { sha256 } from "@langchain/core/utils/hash";
+import { sha256, } from "@langchain/core/utils/hash";
 import { ChatBot } from "@/interfaces/chatbot.interface";
 import { throttle } from 'lodash';
 import { concat } from "@langchain/core/utils/stream";
 import { env } from "@/env";
+import RedisCache from "@/utils/rediscache";
 
 
 const modelName = OPENAI_MODEL_NAME ?? "gpt-3.5-turbo-1106";
@@ -35,11 +35,11 @@ const client = new Redis(redisUrl, {
   db: 0
 });
 
-let cacheClient = null;
+let cacheClient: RedisCache | null = null;
 
 function getCacheClient() {
   if (cacheClient) return cacheClient;
-  cacheClient = new RedisCache(client);
+  cacheClient = new RedisCache(client, { ttl: 400 });
   cacheClient.makeDefaultKeyEncoder(sha256);
   return cacheClient;
 }
