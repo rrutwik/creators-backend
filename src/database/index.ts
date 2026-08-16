@@ -1,6 +1,8 @@
 import mongoose, { ConnectOptions, Connection, Document, Schema, connect, set } from 'mongoose';
 import { NODE_ENV, DB_URL, DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD } from '@config';
 
+import { logger } from '@utils/logger';
+
 export const dbConnection = async () => {
   set('strictQuery', true);
 
@@ -27,6 +29,25 @@ export const dbConnection = async () => {
   if (NODE_ENV !== 'production') {
     set('debug', false);
   }
+
+  // Global plugin for slow query logging (> 50ms)
+  mongoose.plugin((schema: Schema) => {
+    schema.pre(/^find/, function (this: any, next) {
+      this._startTime = Date.now();
+      next();
+    });
+    schema.post(/^find/, function (this: any, res: any, next: any) {
+      if (this._startTime) {
+        const duration = Date.now() - this._startTime;
+        if (duration > 50) {
+          const coll = this.mongooseCollection?.name || 'unknown';
+          const query = this.getQuery ? this.getQuery() : {};
+          logger.warn(`Mongo Slow Query [${duration}ms] on ${coll}: ${JSON.stringify(query)}`);
+        }
+      }
+      if (typeof next === 'function') next();
+    });
+  });
 
   await connect(url, options);
 };

@@ -43,7 +43,7 @@ class BlogController {
   public getBlogBySlug = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const slug = req.params.slug;
-      const blog = await BlogModel.findOne({ slug });
+      const blog = await BlogModel.findOne({ slug }).lean();
 
       if (!blog) {
         return res.status(404).json({ message: "Blog not found" });
