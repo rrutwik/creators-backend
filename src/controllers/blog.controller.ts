@@ -15,7 +15,13 @@ class BlogController {
         query.$text = { $search: search.trim() };
       }
 
-      const totalPosts = await BlogModel.countDocuments(query);
+      let totalPosts: number;
+      if (Object.keys(query).length === 0) {
+        totalPosts = await BlogModel.estimatedDocumentCount();
+      } else {
+        totalPosts = await BlogModel.countDocuments(query);
+      }
+      
       const totalPages = Math.ceil(totalPosts / limit);
       
       const blogs = await BlogModel.find(query)
