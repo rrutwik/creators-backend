@@ -12,13 +12,7 @@ class BlogController {
       const query: any = {};
       
       if (search.trim()) {
-        const searchRegex = new RegExp(search.trim(), "i");
-        query.$or = [
-          { title: { $regex: searchRegex } },
-          { excerpt: { $regex: searchRegex } },
-          { tags: { $in: [searchRegex] } },
-          { content: { $regex: searchRegex } }
-        ];
+        query.$text = { $search: search.trim() };
       }
 
       const totalPosts = await BlogModel.countDocuments(query);

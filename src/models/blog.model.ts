@@ -16,5 +16,24 @@ const BlogSchema: Schema = new Schema(
   }
 );
 
+// Add a compound text index for highly optimized, weighted search
+BlogSchema.index(
+  {
+    title: 'text',
+    tags: 'text',
+    excerpt: 'text',
+    content: 'text'
+  },
+  {
+    weights: {
+      title: 10,
+      tags: 5,
+      excerpt: 2,
+      content: 1
+    },
+    name: 'blog_text_index'
+  }
+);
+
 export const BlogModel = model<Blog & Document>('blog', BlogSchema);
 BlogModel.syncIndexes({ background: true });
