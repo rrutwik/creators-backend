@@ -71,7 +71,6 @@ class GeminiBlogGenerator:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.models = ["gemini-3.6-flash", "gemini-3.5-flash"]
-        self.current_model_index = 0
         
         self.tools_schema = {
             "functionDeclarations": [
@@ -125,38 +124,131 @@ class GeminiBlogGenerator:
                 "responseSchema": self.response_schema
             }
         }
-        
-        while self.current_model_index < len(self.models):
-            current_model = self.models[self.current_model_index]
-            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{current_model}:generateContent?key={self.api_key}"
-            
-            logger.info(f"Sending API request to {current_model}...")
-            response = requests.post(api_url, headers={"Content-Type": "application/json"}, json=payload)
-            
-            if response.status_code == 429 and self.current_model_index < len(self.models) - 1:
-                logger.warning(f"Rate limit (429) reached for {current_model}. Falling back to next model...")
-                self.current_model_index += 1
-                continue
-                
-            if response.status_code != 200:
-                logger.error(f"API Error: {response.status_code} - {response.text}")
-                raise Exception("API request failed")
-                
-            break
-            
-        data = response.json()
-        candidates = data.get("candidates", [])
-        if not candidates:
-            raise Exception("No candidates returned from API")
-            
-        part = candidates[0].get("content", {}).get("parts", [{}])[0]
-        
-        if "functionCall" in part:
-            return {"type": "functionCall", "data": part["functionCall"], "raw_part": part}
-        elif "text" in part:
-            return {"type": "text", "data": part["text"]}
-            
-        raise Exception("Unexpected response part format from Gemini")
+
+        retryable_status_codes = {429, 500, 502, 503, 504}
+
+        for model_index, current_model in enumerate(self.models):
+            api_url = (
+                f"https://generativelanguage.googleapis.com/"
+                f"v1beta/models/{current_model}:generateContent"
+                f"?key={self.api_key}"
+            )
+
+            for attempt in range(1, 4):
+                logger.info(
+                    f"Sending API request to {current_model} "
+                    f"(attempt {attempt}/3)..."
+                )
+
+                try:
+                    response = requests.post(
+                        api_url,
+                        headers={"Content-Type": "application/json"},
+                        json=payload,
+                        timeout=120
+                    )
+
+                except requests.RequestException as e:
+                    logger.warning(
+                        f"Request failed for {current_model}: {e}"
+                    )
+
+                    if attempt < 3:
+                        delay = 2 ** (attempt - 1)
+                        logger.info(f"Retrying in {delay}s...")
+                        time.sleep(delay)
+                        continue
+
+                    break
+
+                # Success
+                if response.status_code == 200:
+                    logger.info(
+                        f"Gemini request succeeded using {current_model}"
+                    )
+
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+
+                    if not candidates:
+                        raise Exception("No candidates returned from API")
+
+                    parts = (
+                        candidates[0]
+                        .get("content", {})
+                        .get("parts", [])
+                    )
+
+                    if not parts:
+                        raise Exception(
+                            "No content parts returned from Gemini"
+                        )
+
+                    part = parts[0]
+
+                    if "functionCall" in part:
+                        return {
+                            "type": "functionCall",
+                            "data": part["functionCall"],
+                            "raw_part": part
+                        }
+
+                    if "text" in part:
+                        return {
+                            "type": "text",
+                            "data": part["text"]
+                        }
+
+                    raise Exception(
+                        "Unexpected response part format from Gemini"
+                    )
+
+                # Retryable error
+                if response.status_code in retryable_status_codes:
+                    logger.warning(
+                        f"Gemini {current_model} returned "
+                        f"HTTP {response.status_code}"
+                    )
+
+                    if attempt < 3:
+                        delay = 2 ** (attempt - 1)
+
+                        logger.info(
+                            f"Retrying {current_model} in {delay}s..."
+                        )
+
+                        time.sleep(delay)
+                        continue
+
+                    logger.warning(
+                        f"{current_model} failed after 3 attempts."
+                    )
+
+                    break
+
+                # Non-retryable error
+                logger.error(
+                    f"Gemini API Error: "
+                    f"{response.status_code} - {response.text}"
+                )
+
+                raise Exception(
+                    f"Gemini API request failed with "
+                    f"HTTP {response.status_code}"
+                )
+
+            # Current model exhausted → fallback
+            if model_index < len(self.models) - 1:
+                next_model = self.models[model_index + 1]
+
+                logger.warning(
+                    f"Falling back from {current_model} "
+                    f"to {next_model}..."
+                )
+
+        raise Exception(
+            "All Gemini models failed after retries."
+        )
 
     def generate_post_data(self) -> Dict[str, Any]:
         recent_history = self._get_recent_history()
