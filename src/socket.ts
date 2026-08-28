@@ -50,12 +50,13 @@ export const socketAuthAdapter = async (socket: Socket, next: (err?: Error) => v
     if (req.guest) socket.data.guest = req.guest;
 
     if (!req.user && !req.guest) {
+      logger.error(`WebSocket connection failed: No valid session for socket ${socket.id}`);
       return next(new Error("Authentication failed"));
     }
 
     next();
   } catch (err) {
-    logger.error("Socket authentication error:", err);
+    logger.error(`WebSocket connection failed: Socket authentication error for socket ${socket.id}:`, err);
     next(new Error("Authentication failed"));
   }
 };
@@ -76,6 +77,14 @@ export const initSocket = async (server: HttpServer, chessService: ChessService)
   });
 
   io.use(socketAuthAdapter);
+
+  io.engine.on("connection_error", (err) => {
+    logger.error(`WebSocket connection failed: ${err.message}`, {
+      code: err.code,
+      message: err.message,
+      context: err.context,
+    });
+  });
 
   const pubClient = new createClient({
     host: process.env.REDIS_HOST,
